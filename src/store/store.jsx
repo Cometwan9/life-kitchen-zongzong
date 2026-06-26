@@ -87,15 +87,27 @@ function reducer(state, action) {
     }
 
     case 'SET_TODOS':
-      return recompute({ ...state, todos: action.todos, assistantMode: action.mode || state.assistantMode, sessionNote: action.note || state.sessionNote })
+      return recompute({
+        ...state,
+        todos: action.todos,
+        assistantMode: action.mode || state.assistantMode,
+        sessionNote: action.note || state.sessionNote,
+        order: [],
+        manualSorted: false,
+        records: {},
+        reviewCard: null,
+      })
 
     case 'UPDATE_TODO': {
       const todos = state.todos.map((t) => (t.id === action.id ? { ...t, ...action.patch } : t))
       return recompute({ ...state, todos })
     }
 
-    case 'REMOVE_TODO':
-      return recompute({ ...state, todos: state.todos.filter((t) => t.id !== action.id) })
+    case 'REMOVE_TODO': {
+      const records = { ...state.records }
+      delete records[action.id]
+      return recompute({ ...state, todos: state.todos.filter((t) => t.id !== action.id), records })
+    }
 
     case 'ABSORB': {
       const res = applyExperience(action.exp, state.recipe, getBartender(state.bartenderId, state.customBartenders))

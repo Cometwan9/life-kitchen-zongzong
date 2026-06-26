@@ -189,39 +189,6 @@ export default function ExecutePage() {
     syncNextState(id)
   }
 
-  function completeAll() {
-    const completedAt = Date.now()
-    state.order.forEach((t) => {
-      const st = state.records[t.id]?.status
-      if (st === 'completed' || st === 'skipped') return
-      dispatch({
-        type: 'SET_RECORD',
-        todoId: t.id,
-        record: { status: 'completed', actualTime: t.estimatedTime || 1, completedAt },
-      })
-    })
-    lastCompleteTime.current = completedAt
-    setActiveId(null)
-    setElapsed(0)
-    activeStartedAt.current = null
-    payloadRef.current = {
-      state: 'done',
-      bartenderId: petBartenderIdRef.current,
-      selected: true,
-      customBartender: customPet,
-      schedule: state.order.map((t) => ({
-        id: t.id,
-        title: t.title,
-        category: t.taskType,
-        taskType: t.taskType,
-        estimatedTime: t.estimatedTime,
-        status: state.records[t.id]?.status === 'skipped' ? 'skipped' : 'completed',
-      })),
-    }
-    pushPetState(payloadRef.current)
-    setConfirmGenerate(false)
-  }
-
   function requestFinalize() {
     if (allTouched && hasCompleted) {
       dispatch({ type: 'FINALIZE' })
@@ -279,8 +246,8 @@ export default function ExecutePage() {
             <div className="toolbar-title">实际执行清单</div>
             <div className="muted-note">不用按 1 到 5。计时开始后只记录真实经过的时间。</div>
           </div>
-          <button className="btn-primary" disabled={allTouched} onClick={completeAll}>
-            一键完成
+          <button className="btn-ghost" disabled={activeId} onClick={requestFinalize}>
+            直接出杯
           </button>
         </div>
         {state.order.map((t, i) => {

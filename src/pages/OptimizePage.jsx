@@ -347,40 +347,6 @@ export default function OptimizePage() {
     syncNextState(id)
   }
 
-  function completeAll() {
-    const completedAt = Date.now()
-    state.order.forEach((t) => {
-      const st = state.records[t.id]?.status
-      if (st === 'completed' || st === 'skipped') return
-      dispatch({
-        type: 'SET_RECORD',
-        todoId: t.id,
-        record: { status: 'completed', actualTime: t.estimatedTime || 1, completedAt },
-      })
-    })
-    lastCompleteTime.current = completedAt
-    setActiveId(null)
-    setElapsed(0)
-    activeStartedAt.current = null
-    payloadRef.current = {
-      state: 'done',
-      bartenderId: petBartenderIdRef.current,
-      customBartender: customPet,
-      selected: true,
-      schedule: state.order.map((t) => ({
-        id: t.id,
-        title: t.title,
-        category: t.taskType,
-        taskType: t.taskType,
-        estimatedTime: t.estimatedTime,
-        status: state.records[t.id]?.status === 'skipped' ? 'skipped' : 'completed',
-      })),
-    }
-    pushPetState(payloadRef.current)
-    setConfirmGenerate(false)
-    setTimeout(() => dispatch({ type: 'FINALIZE' }), 0)
-  }
-
   function requestFinalize() {
     if (allTouched && hasCompleted) {
       dispatch({ type: 'FINALIZE' })
@@ -466,8 +432,8 @@ export default function OptimizePage() {
           <div>
             <label className="field">▸ 今日调配清单</label>
           </div>
-          <button className="btn-primary" disabled={allTouched} onClick={completeAll}>
-            一键完成
+          <button className="btn-ghost" disabled={activeId} onClick={requestFinalize}>
+            直接出杯
           </button>
         </div>
 
