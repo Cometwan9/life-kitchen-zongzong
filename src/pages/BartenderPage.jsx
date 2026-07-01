@@ -24,14 +24,14 @@ const accentFor = (bartender) => {
 }
 
 const BADGE_LABELS = {
-  rosemary: '控场',
-  ginger: '开局',
-  mint: '缓冲',
-  lemon: '清醒',
-  garlic: '护场',
-  cilantro: '随性',
-  chili: '冲刺',
-  osmanthus: '优雅',
+  rosemary: '吧台主理',
+  ginger: '启动侍者',
+  mint: '缓冲调饮',
+  lemon: '清醒试饮',
+  garlic: '边界守卫',
+  cilantro: '灵活招待',
+  chili: '冲刺火手',
+  osmanthus: '优雅老板娘',
 }
 
 const formatClock = (date) =>
@@ -206,7 +206,7 @@ export default function BartenderPage() {
     ensurePetState({ state: 'idle', bartenderId: cur.id, selected: true, schedule: [], customBartender: cur.custom ? cur : undefined })
     summonTimer.current = setTimeout(() => {
       dispatch({ type: 'GO', step: 'todos' })
-    }, 850)
+    }, 1650)
   }
 
   const touchHero = (event) => {
@@ -323,7 +323,7 @@ export default function BartenderPage() {
             <span className="happy-spark s3" aria-hidden="true" />
             <span className="confirm-orbit" aria-hidden="true" />
             {!cur.helper && <span className={`role-badge badge-${cur.id}`} aria-hidden="true">
-              <b>{BADGE_LABELS[cur.id] || '专属'}</b>
+              <b>{BADGE_LABELS[cur.id] || '专属调酒师'}</b>
               <i />
             </span>}
           </div>
@@ -411,13 +411,17 @@ export default function BartenderPage() {
             <span className="journey-spark j1" />
             <span className="journey-spark j2" />
             <span className="journey-spark j3" />
-            <div className="journey-pet">
-              {(summonBartender || cur).image ? (
-                <img src={(summonBartender || cur).image} alt="" />
-              ) : (
-                <PixelSprite sprite={CREATURE} scale={5} colors={{ b: BODY[(summonBartender || cur).id] || '#7FBFA6' }} />
-              )}
-            </div>
+            {summonMotion.videoUrl ? (
+              <video className="journey-video" src={summonMotion.videoUrl} autoPlay muted loop playsInline />
+            ) : (
+              <div className="journey-pet">
+                {(summonBartender || cur).image ? (
+                  <img src={(summonBartender || cur).image} alt="" />
+                ) : (
+                  <PixelSprite sprite={CREATURE} scale={5} colors={{ b: BODY[(summonBartender || cur).id] || '#7FBFA6' }} />
+                )}
+              </div>
+            )}
             <div className="journey-bar">
               <span className="bar-counter" />
               <span className="bar-cup" />

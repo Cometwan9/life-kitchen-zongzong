@@ -9,16 +9,8 @@ import { EVOMAP_EXPERIENCES } from '../data/evomap.js'
 import { INGREDIENTS } from '../data/ingredients.js'
 import { onPetStatus, startPetSync, stopPetSync, pushPetState, ensurePetState, onPetAction } from '../engine/petBridge.js'
 import { formatDuration } from '../engine/time.js'
-import { getIngredientVolume, getRecipeVolumeLayers } from '../engine/recipeVolume.js'
-
-const STRATEGY_LABEL = {
-  deep_first: '先点主炉火',
-  ignite_first: '先点引火星',
-  recovery_buffer: '月光缓冲咒',
-  batch_admin: '同盘收纳术',
-  light_first: '轻饮开场',
-  manual: '你的手写酒单',
-}
+import { getRecipeVolumeLayers } from '../engine/recipeVolume.js'
+import { canCompleteTask } from '../engine/execution.js'
 
 const OPTIMIZATION_PROPS = [
   {
@@ -90,7 +82,7 @@ const VESSELS = [
 const LOCKED_VESSELS = [
   { id: 'chalice', label: '星月圣杯', hint: '完成 3 杯后解锁' },
   { id: 'teapot', label: '月光茶壶', hint: '连续记录 7 天后解锁' },
-  { id: 'crystal', label: '水晶高脚杯', hint: '保存到酒柜后解锁' },
+  { id: 'crystal', label: '水晶高脚杯', hint: '保存到冰柜后解锁' },
 ]
 
 const dayStart = 8 * 60 + 30
@@ -102,6 +94,11 @@ function clock(min) {
   const h = Math.floor(min / 60)
   const m = min % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function briefTitle(title = '') {
+  const clean = String(title).trim()
+  return clean.length > 16 ? `${clean.slice(0, 16)}...` : clean
 }
 
 function currentMinuteOfDay() {
@@ -172,6 +169,7 @@ export default function OptimizePage() {
   const [stageMode, setStageMode] = useState(isQuickMode ? 'execute' : 'recipe')
   const [rhythmKey, setRhythmKey] = useState('academy')
   const [sliceView, setSliceView] = useState('simple')
+  const [selectedSliceTool, setSelectedSliceTool] = useState('ice')
   const [vesselPanel, setVesselPanel] = useState('')
   const [customVesselName, setCustomVesselName] = useState(state.customVesselLabel || '我的杯子')
   const timer = useRef(null)
@@ -218,7 +216,6 @@ export default function OptimizePage() {
   const activeBestWindow = active ? Math.max(8, Math.min(45, active.estimatedTime || 15)) : 12
   const statusOf = (t) => state.records[t.id]?.status
   const hasOrder = state.order.length > 0
-  const allTouched = hasOrder && state.order.every((t) => statusOf(t))
   const completedCount = state.order.filter((t) => statusOf(t) === 'completed').length
   const hasCompleted = completedCount > 0
   const canEditRecipe = !isQuickMode && stageMode === 'recipe'
@@ -226,6 +223,7 @@ export default function OptimizePage() {
   const currentTask = active || nextTask
   const currentTaskIndex = currentTask ? state.order.findIndex((t) => t.id === currentTask.id) : -1
   const isFreeTimeMode = state.assistantMode === 'free_time'
+  const isSimpleRecipeView = sliceView === 'simple'
   const dayPlan = useMemo(() => buildDayPlan(state.order, rhythmKey, state.assistantMode), [state.order, rhythmKey, state.assistantMode])
   const freeSliceItems = useMemo(() => {
     const slots = Object.values(dayPlan).flat()
@@ -277,6 +275,10 @@ export default function OptimizePage() {
       },
     ]
   }, [dayPlan, state.order])
+  const selectedFlavorCup = useMemo(
+    () => flavorCups.find((cup) => cup.key === selectedSliceTool) || flavorCups[0],
+    [flavorCups, selectedSliceTool]
+  )
 
   useEffect(() => {
     setStageMode('recipe')
@@ -341,7 +343,7 @@ export default function OptimizePage() {
       if (action.type !== 'finalize') return
       requestFinalize()
     })
-  }, [allTouched, hasCompleted, activeId, state.order, state.records]) // eslint-disable-line
+  }, [hasCompleted, activeId, state.order, state.records]) // eslint-disable-line
 
   useEffect(() => {
     return onPetAction((action) => {
@@ -433,6 +435,7 @@ export default function OptimizePage() {
   }
 
   function completeTask(todoId, completedAt) {
+    if (!canCompleteTask({ activeId, todoId })) return
     const t = state.order.find((x) => x.id === todoId)
     if (!t) return
     const actualMin = computeActualMin(todoId, completedAt)
@@ -459,6 +462,7 @@ export default function OptimizePage() {
   }
 
   function finish(actualMin) {
+    if (!activeId) return
     const min = actualMin ?? Math.max(1, Math.round(elapsed / 60))
     const completedAt = Date.now()
     const id = activeId
@@ -472,6 +476,7 @@ export default function OptimizePage() {
 
   function skip() {
     const id = activeId
+    if (!id) return
     dispatch({ type: 'SET_RECORD', todoId: id, record: { status: 'skipped' } })
     setActiveId(null)
     setElapsed(0)
@@ -480,10 +485,6 @@ export default function OptimizePage() {
   }
 
   function requestFinalize() {
-    if (allTouched && hasCompleted) {
-      dispatch({ type: 'FINALIZE' })
-      return
-    }
     setConfirmGenerate(true)
   }
 
@@ -560,16 +561,17 @@ export default function OptimizePage() {
         {isQuickMode ? '一次只看一项。' : '排好顺序，就可以开做。'}
       </p>
 
-      <div className="card order-card">
+      <div className={`card order-card ${active ? 'pomodoro-mode' : ''}`}>
         <div className="execute-toolbar order-toolbar">
           <div>
             <label className="field">{isQuickMode ? '▸ 执行清单' : '▸ 调配清单'}</label>
             <span className="toolbar-status">
-              {completedCount}/{state.order.length} 已完成{!isQuickMode && ` · ${STRATEGY_LABEL[state.strategy] || state.strategy}`}
+              {completedCount}/{state.order.length} 完成
             </span>
           </div>
-          <button className="btn-ghost compact-action" disabled={!hasOrder || activeId} onClick={requestFinalize}>
-            直接出杯
+          <button className="btn-ghost compact-action result-jump-action" disabled={!hasOrder || activeId} onClick={requestFinalize}>
+            <span>{hasCompleted ? '出杯看结果 →' : '空杯看结果 →'}</span>
+            <small>{hasCompleted ? '查看最终出品' : '还没完成，会是空杯'}</small>
           </button>
         </div>
 
@@ -577,7 +579,7 @@ export default function OptimizePage() {
           <div className="order-blueprint" aria-label="酒单比例图">
             <div className="panel-title">
               <strong>杯中比例</strong>
-              <span>时间会变成层次</span>
+              <span>{totalMinutes}min</span>
             </div>
             <div className={`blueprint-glass vessel-${state.drinkVessel || 'highball'} ${active ? 'is-brewing' : ''}`} aria-hidden="true">
               <div className="blueprint-liquid">
@@ -598,19 +600,16 @@ export default function OptimizePage() {
               </div>
             </div>
             <div className="blueprint-table" aria-hidden="true" />
-            {canEditRecipe && <div className={`drink-orbit ${isFreeTimeMode ? `slice-${sliceView}` : ''}`} aria-label="饮品周围的小料配比">
-              {isFreeTimeMode && (
-                <div className="slice-view-switch" role="group" aria-label="空闲切片呈现方式">
-                  <span>空闲切片</span>
-                  <button type="button" className={sliceView === 'simple' ? 'on' : ''} onClick={() => setSliceView('simple')}>简约版</button>
-                  <button type="button" className={sliceView === 'full' ? 'on' : ''} onClick={() => setSliceView('full')}>完整版</button>
-                </div>
-              )}
-              {isFreeTimeMode && sliceView === 'simple' ? (
+            {canEditRecipe && <div className={`drink-orbit slice-${sliceView}`} aria-label="调配酒单显示模式">
+              <div className="slice-view-switch" role="group" aria-label="调配酒单显示模式">
+                <button type="button" className={sliceView === 'simple' ? 'on' : ''} onClick={() => setSliceView('simple')}>简约版</button>
+                <button type="button" className={sliceView === 'full' ? 'on' : ''} onClick={() => setSliceView('full')}>复杂版</button>
+              </div>
+              {isSimpleRecipeView ? (
                 <div className="simple-slice-card" aria-label="简约空闲安排">
                   <div className="simple-slice-head">
                     <strong>{totalMinutes}min</strong>
-                    <span>{freeSliceItems.length} 个动作，按顺序做就好</span>
+                    <span>{freeSliceItems.length} 项</span>
                   </div>
                   <div className="simple-slice-track">
                     {freeSliceItems.map((item, index) => (
@@ -628,25 +627,29 @@ export default function OptimizePage() {
                       </div>
                     ))}
                   </div>
-                  <p>不想研究配方的话，就照这条顺序开始。</p>
                 </div>
               ) : (
                 <>
-                  <div className="flavor-cup-row" aria-label="空闲时间配比">
-                    {flavorCups.map((cup) => (
-                      <div
-                        key={cup.key}
-                        className={`flavor-cup ${cup.key}`}
-                        style={{ '--cup-fill': `${cup.percent}%`, '--cup-tone': cup.tone }}
-                      >
-                        <span className="flavor-vial" aria-hidden="true"><i /></span>
-                        <span>
-                          <strong>{cup.title}</strong>
-                          <em>{cup.label} · {cup.minutes || 0}min</em>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {isFreeTimeMode && (
+                    <div className="flavor-cup-row" aria-label="空闲时间配比">
+                      {flavorCups.map((cup) => (
+                        <button
+                          type="button"
+                          key={cup.key}
+                          className={`flavor-cup ${cup.key} ${selectedSliceTool === cup.key ? 'selected' : ''}`}
+                          style={{ '--cup-fill': `${cup.percent}%`, '--cup-tone': cup.tone }}
+                          onClick={() => setSelectedSliceTool(cup.key)}
+                          aria-pressed={selectedSliceTool === cup.key}
+                        >
+                          <span className="flavor-vial" aria-hidden="true"><i /></span>
+                          <span>
+                            <strong>{cup.title}</strong>
+                            <em>{cup.label}</em>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="addon-cup-row" aria-label="可选优化小料">
                     {EVOMAP_EXPERIENCES.map((exp, index) => {
                       const absorbed = state.absorbed.includes(exp.id)
@@ -669,7 +672,7 @@ export default function OptimizePage() {
                           </span>
                           <span>
                             <strong>{prop.name}</strong>
-                            <em>{absorbed ? '已加入 · 点此撤回' : applicable ? '适合今天 · 可加入' : '可加入'}</em>
+                            <em>{absorbed ? '已加入' : applicable ? '推荐' : '可选'}</em>
                           </span>
                         </button>
                       )
@@ -677,20 +680,8 @@ export default function OptimizePage() {
                   </div>
                 </>
               )}
-              <div className="slice-guide-card">
-                <strong>{sliceView === 'simple' && isFreeTimeMode ? '直接开做' : '小料调配'}</strong>
-                <span>
-                  {active
-                    ? `${activeBestWindow} 分钟内饮用风味最好。`
-                    : isFreeTimeMode
-                      ? sliceView === 'simple'
-                        ? '简约版只保留顺序和时间，减少选择压力。'
-                        : '完整版保留小料和余量。'
-                      : '需要的话，加一点小料。'}
-                </span>
-              </div>
             </div>}
-            {canEditRecipe && <div className="vessel-picker" role="group" aria-label="选择今日器皿">
+            {canEditRecipe && !isSimpleRecipeView && <div className="vessel-picker" role="group" aria-label="选择今日器皿">
               {VESSELS.map((vessel) => (
                 <button
                   key={vessel.id}
@@ -725,7 +716,7 @@ export default function OptimizePage() {
                 <span>{state.customVesselLabel || '自定义杯'}</span>
               </button>
             </div>}
-            {canEditRecipe && vesselPanel && (
+            {canEditRecipe && !isSimpleRecipeView && vesselPanel && (
               <div className={`vessel-panel vessel-panel-${vesselPanel}`} aria-live="polite">
                 {vesselPanel === 'more' ? (
                   LOCKED_VESSELS.map((vessel) => (
@@ -770,6 +761,11 @@ export default function OptimizePage() {
             )}
             {active ? (
               <div className="order-brew-stage">
+                {bartender.image && (
+                  <div className="focus-companion" aria-hidden="true">
+                    <img src={bartender.image} alt="" />
+                  </div>
+                )}
                 <div className="now brew-kicker">制作中</div>
                 <div className="task">{active.title}</div>
                 <div className="brew-say">{ACTION[active.taskType] || '调制中'}</div>
@@ -793,7 +789,7 @@ export default function OptimizePage() {
           {canEditRecipe && <div className="recipe-sort-panel" aria-label="配方层次排序">
             <div className="panel-title mini-title">
               <strong>配方层次</strong>
-              <span>影响下方执行顺序</span>
+              <span>拖动排序</span>
             </div>
             <div className="recipe-sort-list">
               {state.order.map((t, i) => (
@@ -824,7 +820,7 @@ export default function OptimizePage() {
                   </span>
                   <div>
                     <strong>{String(i + 1).padStart(2, '0')}</strong>
-                    <span>{t.title}</span>
+                    <span title={t.title}>{briefTitle(t.title)}</span>
                   </div>
                   <div className="sort-stepper" aria-label="调整这一层的位置">
                     <button type="button" disabled={i === 0} onClick={() => moveItem(i, -1)} aria-label="上移">↑</button>
@@ -874,10 +870,9 @@ export default function OptimizePage() {
                   </span>
                   <span>Step {currentTaskIndex + 1}/{state.order.length}</span>
                 </div>
-                <div className="single-task-title">{currentTask.title}</div>
+                <div className="single-task-title" title={currentTask.title}>{briefTitle(currentTask.title)}</div>
                 <div className="single-task-sub">
-                  约 {formatDuration(currentTask.estimatedTime)} · 预计入杯{' '}
-                  {getIngredientVolume({ category: currentTask.taskType, ratio: (currentTask.estimatedTime || 0) / totalMinutes }).label}
+                  约 {formatDuration(currentTask.estimatedTime)}
                 </div>
                 {active ? (
                   <div className="single-task-actions active">
@@ -958,19 +953,19 @@ export default function OptimizePage() {
       <div className="btn-row">
         <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'todos' })}>← 重新倾诉</button>
         <div className="spacer" />
-        <button className="btn-primary" onClick={requestFinalize}>
-          {hasCompleted ? (allTouched ? '出杯 ✦' : '直接出杯') : '生成空杯'}
+        <button className="btn-primary result-final-btn" onClick={requestFinalize}>
+          {hasCompleted ? '出杯看结果 →' : '留一只空杯 →'}
         </button>
       </div>
 
       {confirmGenerate && (
         <div className="confirm-panel" role="dialog" aria-modal="true" aria-label="确认直接调配">
           <div className="confirm-card">
-            <div className="confirm-title">{hasCompleted ? '还有事项没有完成' : '还没有完成的事项'}</div>
+            <div className="confirm-title">{hasCompleted ? '现在出杯？' : '现在看空杯？'}</div>
             <p>
               {hasCompleted
-                ? '未完成的会留在记录里，不会算作完成。'
-                : '还没有完成项，只会得到一只空杯。'}
+                ? '会进入最终出品页；未完成的事项会留在记录里，不会算作完成。'
+                : '还没有完成项，结果页会显示空杯，适合只想先存个记录的时候。'}
             </p>
             <div className="btn-row">
               <button className="btn-ghost" onClick={() => setConfirmGenerate(false)}>再看看清单</button>

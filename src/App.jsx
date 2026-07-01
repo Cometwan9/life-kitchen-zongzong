@@ -1,6 +1,7 @@
 import { useStore, STEPS } from './store/store.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { pushPetState, startActionPoll, stopActionPoll, onPetAction } from './engine/petBridge.js'
+import LoginPage from './pages/LoginPage.jsx'
 import IntroPage from './pages/IntroPage.jsx'
 import GuestProfilePage from './pages/GuestProfilePage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
@@ -8,13 +9,18 @@ import TodoPage from './pages/TodoPage.jsx'
 import OptimizePage from './pages/OptimizePage.jsx'
 import ExecutePage from './pages/ExecutePage.jsx'
 import RevealPage from './pages/RevealPage.jsx'
+import stepSummonIcon from '../assets/step-icons/step-1-summon.png'
+import stepChatIcon from '../assets/step-icons/step-2-chat.png'
+import stepRecipeIcon from '../assets/step-icons/step-3-recipe.png'
+import stepMixIcon from '../assets/step-icons/step-4-mix.png'
+import stepRevealIcon from '../assets/step-icons/step-5-reveal.png'
 
 const STEP_META = {
-  bartender: { label: '召唤种种', hint: '空杯待命', icon: 'empty-cup' },
-  todos: { label: '吧台聊聊', hint: '说说今天的事', icon: 'filled-cup' },
-  optimize: { label: '调配酒单', hint: '排好处理顺序', icon: 'receipt' },
-  execute: { label: '精灵调配', hint: '种种施一点魔法', icon: 'wand' },
-  reveal: { label: '生成饮品', hint: '今日特调完成', icon: 'drink' },
+  bartender: { label: '召唤种种', hint: '空杯待命', icon: 'empty-cup', image: stepSummonIcon },
+  todos: { label: '吧台聊聊', hint: '说说今天的事', icon: 'filled-cup', image: stepChatIcon },
+  optimize: { label: '调配酒单', hint: '排好处理顺序', icon: 'receipt', image: stepRecipeIcon },
+  execute: { label: '精灵调配', hint: '种种施一点魔法', icon: 'wand', image: stepMixIcon },
+  reveal: { label: '生成饮品', hint: '今日特调完成', icon: 'drink', image: stepRevealIcon },
 }
 
 const PAGES = {
@@ -28,6 +34,7 @@ const PAGES = {
 export default function App() {
   const { state, dispatch } = useStore()
   const [introStage, setIntroStage] = useState('intro')
+  const [pendingStartMode, setPendingStartMode] = useState('full')
   const bartenderReadyAt = useRef(0)
   const Page = PAGES[state.step] || BartenderPage
   const curIdx = STEPS.indexOf(state.step)
@@ -39,7 +46,12 @@ export default function App() {
     setIntroStage('guest')
   }
 
-  const startIntro = (mode = 'full') => {
+  const startIntro = (mode = 'full', authenticated = false) => {
+    if (!authenticated && (!state.authToken || !state.authUser)) {
+      setPendingStartMode(mode)
+      setIntroStage('login')
+      return
+    }
     dispatch({ type: 'SET_WORKFLOW_MODE', mode })
     if (mode === 'quick') {
       const id = state.lockedBartenderId || state.bartenderId || 'lemon'
@@ -92,6 +104,8 @@ export default function App() {
   }, [dispatch, introStage, state.step, state.customBartenders])
 
   if (introStage === 'intro') return <IntroPage onQuickStart={() => startIntro('quick')} onFullStart={() => startIntro('full')} />
+  if (introStage === 'login') return <LoginPage onAuthenticated={() => startIntro(pendingStartMode, true)} />
+  if (!state.authToken || !state.authUser) return <LoginPage onAuthenticated={() => setIntroStage('intro')} />
   if (introStage === 'guest') return <GuestProfilePage onStart={startIntro} />
 
   return (
@@ -112,8 +126,8 @@ export default function App() {
             return (
             <div key={s} className={`brew-step-wrap ${stepState}`}>
               <span className={`step-dot ${s === state.step ? 'active' : i < curIdx ? 'done' : ''}`} aria-current={s === state.step ? 'step' : undefined}>
-                <span className={`step-icon ${meta.icon}`} aria-hidden="true">
-                  <span className="step-icon-part" />
+                <span className={`step-icon ${meta.icon} ${meta.image ? 'has-art' : ''}`} aria-hidden="true">
+                  {meta.image ? <img src={meta.image} alt="" /> : <span className="step-icon-part" />}
                 </span>
                 <span className="step-label">{meta.label}</span>
                 <span className="step-hint">{meta.hint}</span>

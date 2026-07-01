@@ -271,29 +271,13 @@ function renderCounter(pending, done, showIt, options = {}) {
         return `<span class="${cls}" aria-hidden="true"></span>`
       })
       .join('')
-    const currentHtml = current
-      ? `
-      <div class="ingredient current" data-id="${escapeHtml(current.id)}" data-status="pending">
-        <span class="task-step">当前这一项</span>
-        <span class="ing-title">${escapeHtml(current.title)}</span>
-        <span class="ing-meta">${current.estimatedTime} 分钟</span>
-        <button class="task-check task-finish" data-action="complete" aria-label="完成 ${escapeAttr(current.title)}"></button>
-        <button class="task-start" data-action="start" aria-label="开始 ${escapeAttr(current.title)}">开始</button>
-      </div>`
-      : `
-      <div class="ingredient done-all">
-        <span class="task-check" aria-hidden="true"></span>
-        <span class="ing-title">这一杯已经调完</span>
-        <span class="ing-meta">可以出杯</span>
-      </div>`
-    const lastDone = done[done.length - 1]
     html = `
-      <div class="ticket-head"><span>To Do List</span><small>${done.length}/${pending.length + done.length}</small></div>
       <div class="ticket-progress">${progressHtml}</div>
-      ${currentHtml}
-      <div class="ticket-actions">
-        ${lastDone ? `<button data-action="undo" data-id="${escapeAttr(lastDone.id)}">撤销上一项</button>` : ''}
-        <button data-action="finalize">${pending.length === 0 ? '生成饮品' : '暂存酒单'}</button>
+      <div class="counter-compact">
+        <small>${done.length}/${total}</small>
+        ${current
+          ? `<button class="task-start compact-start" data-action="start" data-id="${escapeAttr(current.id)}" aria-label="开始当前任务"></button>`
+          : `<button class="compact-finalize" data-action="finalize" aria-label="生成饮品"></button>`}
       </div>`
   }
 
@@ -306,42 +290,20 @@ function renderCounter(pending, done, showIt, options = {}) {
   counterEl.innerHTML = html
   counterEl.classList.toggle('show', showIt)
 
-  counterEl.querySelectorAll('.ingredient[data-status="pending"]').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation()
-    })
-  })
   counterEl.querySelectorAll('[data-action="start"]').forEach((button) => {
     button.addEventListener('click', (e) => {
       e.stopPropagation()
-      const id = button.closest('.ingredient')?.dataset.id
+      const id = button.dataset.id
       if (!id) return
-      button.textContent = '调配中'
       button.disabled = true
       window.pet?.sendAction?.({ type: 'start', todoId: id, startedAt: Date.now() })
       showBubble('开始调配 ✦', 900)
-    })
-  })
-  counterEl.querySelectorAll('[data-action="complete"]').forEach((button) => {
-    button.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const id = button.closest('.ingredient')?.dataset.id
-      if (!id) return
-      window.pet?.sendAction?.({ type: 'complete', todoId: id, completedAt: Date.now() })
-      showBubble('这一项完成 ✦', 900)
     })
   })
   counterEl.querySelector('[data-action="finalize"]')?.addEventListener('click', (e) => {
     e.stopPropagation()
     window.pet?.sendAction?.({ type: 'finalize', requestedAt: Date.now() })
     showBubble('准备出杯 ✦', 1200)
-  })
-  counterEl.querySelector('[data-action="undo"]')?.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const id = e.currentTarget?.dataset?.id
-    if (!id) return
-    window.pet?.sendAction?.({ type: 'undo', todoId: id, requestedAt: Date.now() })
-    showBubble('撤回上一项', 900)
   })
 }
 
@@ -436,13 +398,13 @@ function confirmChooser() {
 }
 function toggleTicket() {
   if (lastState === 'choosing') return false
-  const hasMenu = counterEl.dataset.hasTasks === '1' && lastCounterHtml.includes('ticket-head')
+  const hasMenu = counterEl.dataset.hasTasks === '1' && lastCounterHtml.includes('ticket-progress')
   if (!hasMenu) return false
   const isOpen = counterEl.classList.contains('show')
   boardCollapsed = isOpen
   ticketOpen = !isOpen
   counterEl.classList.toggle('show', ticketOpen)
-  if (ticketOpen) showBubble('看板已展开', 900)
+  if (ticketOpen) showBubble('进度已展开', 900)
   return true
 }
 function patPet() {

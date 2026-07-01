@@ -1,16 +1,43 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
+import { createHash, createHmac, randomInt, randomUUID } from 'node:crypto'
 
 const DB_DIR = path.resolve(process.cwd(), '.data')
 const DB_FILE = path.join(DB_DIR, 'life-kitchen-db.json')
 let petProcess = null
+
+function loadLocalEnv() {
+  for (const file of ['.env', '.env.local']) {
+    const envPath = path.resolve(process.cwd(), file)
+    if (!existsSync(envPath)) continue
+    const lines = readFileSync(envPath, 'utf8').split(/\r?\n/)
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue
+      const index = trimmed.indexOf('=')
+      const key = trimmed.slice(0, index).trim()
+      const rawValue = trimmed.slice(index + 1).trim()
+      if (!key || process.env[key]) continue
+      process.env[key] = rawValue.replace(/^['"]|['"]$/g, '')
+    }
+  }
+}
+
+loadLocalEnv()
 
 const emptyDb = () => ({
   users: {},
   drinks: [],
   friendships: [],
   shares: [],
+  verificationCodes: {},
+  sessions: {},
+  inviteCodes: {
+    ZHONGZHONG: { code: 'ZHONGZHONG', label: '种种内测券', maxUses: 500, usedBy: [] },
+    LIFE2026: { code: 'LIFE2026', label: 'Life Kitchen 邀请券', maxUses: 500, usedBy: [] },
+  },
 })
 
 async function readDb() {
@@ -28,15 +55,47 @@ async function writeDb(db) {
 }
 
 function createId(prefix) {
-  const random = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  const random = randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`
   return `${prefix}-${random}`
+}
+
+function normalizePhone(phone = '') {
+  const clean = String(phone).trim().replace(/[^\d+]/g, '')
+  if (clean.startsWith('+')) return clean.slice(0, 20)
+  return clean.slice(0, 20)
+}
+
+function hashCode(code = '') {
+  return createHash('sha256').update(String(code)).digest('hex')
+}
+
+function hmac(key, value, encoding) {
+  return createHmac('sha256', key).update(value).digest(encoding)
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex')
+}
+
+function publicUser(user = {}) {
+  return {
+    id: user.id,
+    name: user.name,
+    displayName: user.displayName || user.name,
+    gender: user.gender || 'neutral',
+    locationLabel: user.locationLabel || '远方',
+    coords: user.coords || null,
+    phone: user.phone ? user.phone.replace(/(\d{3})\d+(\d{2})$/, '$1****$2') : '',
+    inviteCode: user.inviteCode || '',
+    updatedAt: user.updatedAt,
+  }
 }
 
 function sendJson(res, status, data) {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
   res.end(JSON.stringify(data))
 }
@@ -64,8 +123,134 @@ function normalizeUser(input = {}) {
     gender,
     locationLabel,
     coords: input.coords || null,
+    phone: input.phone || '',
+    inviteCode: input.inviteCode || '',
     updatedAt: new Date().toISOString(),
   }
+}
+
+function ensureInvite(db, inviteCode = '') {
+  const code = String(inviteCode || '').trim().toUpperCase()
+  if (!code) return { ok: false, error: 'missing_invite' }
+  const invite = db.inviteCodes?.[code]
+  if (!invite) return { ok: false, error: 'invalid_invite' }
+  const usedBy = invite.usedBy || []
+  if (invite.maxUses && usedBy.length >= invite.maxUses) return { ok: false, error: 'invite_full' }
+  return { ok: true, code, invite }
+}
+
+function markInviteUsed(db, code, userId) {
+  if (!code || !db.inviteCodes?.[code]) return
+  const invite = db.inviteCodes[code]
+  invite.usedBy = [...new Set([...(invite.usedBy || []), userId])]
+}
+
+async function sendSmsCode(phone, code) {
+  if (process.env.TENCENT_SECRET_ID && process.env.TENCENT_SECRET_KEY && process.env.TENCENT_SMS_SDK_APP_ID) {
+    return sendTencentSmsCode(phone, code)
+  }
+  const smsUrl = process.env.SMS_API_URL || ''
+  const smsKey = process.env.SMS_API_KEY || ''
+  if (!smsUrl || !smsKey) {
+    console.log(`[Life Kitchen dev sms] ${phone}: ${code}`)
+    return { mode: 'dev-console' }
+  }
+  const upstream = await fetch(smsUrl, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${smsKey}`,
+    },
+    body: JSON.stringify({
+      phone,
+      code,
+      template: process.env.SMS_TEMPLATE || 'life-kitchen-login',
+    }),
+  })
+  return { mode: 'sms-provider', ok: upstream.ok, status: upstream.status }
+}
+
+async function sendTencentSmsCode(phone, code) {
+  const required = [
+    'TENCENT_SECRET_ID',
+    'TENCENT_SECRET_KEY',
+    'TENCENT_SMS_SDK_APP_ID',
+    'TENCENT_SMS_SIGN_NAME',
+    'TENCENT_SMS_TEMPLATE_ID',
+  ]
+  const missing = required.filter((key) => !process.env[key])
+  if (missing.length) {
+    return {
+      mode: 'tencent-sms',
+      ok: false,
+      status: 'missing-config',
+      data: { Response: { Error: { Message: `缺少短信配置：${missing.join(', ')}` } } },
+    }
+  }
+  const host = 'sms.tencentcloudapi.com'
+  const endpoint = `https://${host}`
+  const service = 'sms'
+  const action = 'SendSms'
+  const version = '2021-01-11'
+  const region = process.env.TENCENT_SMS_REGION || 'ap-guangzhou'
+  const timestamp = Math.floor(Date.now() / 1000)
+  const date = new Date(timestamp * 1000).toISOString().slice(0, 10)
+  const normalizedPhone = phone.startsWith('+') ? phone : `+86${phone.replace(/\D/g, '')}`
+  const payload = JSON.stringify({
+    PhoneNumberSet: [normalizedPhone],
+    SmsSdkAppId: process.env.TENCENT_SMS_SDK_APP_ID,
+    SignName: process.env.TENCENT_SMS_SIGN_NAME,
+    TemplateId: process.env.TENCENT_SMS_TEMPLATE_ID,
+    TemplateParamSet: [code],
+  })
+
+  const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${host}\nx-tc-action:${action.toLowerCase()}\n`
+  const signedHeaders = 'content-type;host;x-tc-action'
+  const canonicalRequest = [
+    'POST',
+    '/',
+    '',
+    canonicalHeaders,
+    signedHeaders,
+    sha256(payload),
+  ].join('\n')
+  const credentialScope = `${date}/${service}/tc3_request`
+  const stringToSign = [
+    'TC3-HMAC-SHA256',
+    timestamp,
+    credentialScope,
+    sha256(canonicalRequest),
+  ].join('\n')
+  const secretDate = hmac(`TC3${process.env.TENCENT_SECRET_KEY}`, date)
+  const secretService = hmac(secretDate, service)
+  const secretSigning = hmac(secretService, 'tc3_request')
+  const signature = hmac(secretSigning, stringToSign, 'hex')
+  const authorization = `TC3-HMAC-SHA256 Credential=${process.env.TENCENT_SECRET_ID}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+
+  const upstream = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: authorization,
+      'Content-Type': 'application/json; charset=utf-8',
+      Host: host,
+      'X-TC-Action': action,
+      'X-TC-Timestamp': String(timestamp),
+      'X-TC-Version': version,
+      'X-TC-Region': region,
+    },
+    body: payload,
+  })
+  const data = await upstream.json().catch(() => ({}))
+  return {
+    mode: 'tencent-sms',
+    ok: upstream.ok && !data.Response?.Error,
+    status: upstream.status,
+    data,
+  }
+}
+
+function findUserByPhone(db, phone) {
+  return Object.values(db.users || {}).find((user) => user.phone === phone)
 }
 
 function publicDrink(drink) {
@@ -216,7 +401,7 @@ function startPetProcess() {
 
 export async function handleApiRequest(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
@@ -233,13 +418,115 @@ export async function handleApiRequest(req, res) {
       return true
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/auth/send-code') {
+      const body = await readBody(req)
+      const phone = normalizePhone(body.phone)
+      const inviteCheck = await readDb().then((db) => ensureInvite(db, body.inviteCode))
+      if (!phone || phone.replace(/\D/g, '').length < 8) {
+        sendJson(res, 400, { error: 'phone_invalid', message: '手机号不太对。' })
+        return true
+      }
+      if (!inviteCheck.ok) {
+        sendJson(res, 403, { error: inviteCheck.error, message: '邀请码不对，先找酒馆掌柜要一张。' })
+        return true
+      }
+      const db = await readDb()
+      const code = String(randomInt(100000, 999999))
+      db.verificationCodes[phone] = {
+        phone,
+        codeHash: hashCode(code),
+        inviteCode: inviteCheck.code,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+      }
+      await writeDb(db)
+      const sms = await sendSmsCode(phone, code)
+      if (sms.ok === false) {
+        sendJson(res, 502, {
+          error: 'sms_failed',
+          message: '短信没有发出去，请检查短信服务配置。',
+          detail: sms.data?.Response?.Error?.Message || sms.status || '',
+        })
+        return true
+      }
+      sendJson(res, 200, {
+        ok: true,
+        expiresIn: 300,
+        devCode: sms.mode === 'dev-console' ? code : undefined,
+        message: sms.mode === 'dev-console' ? '开发环境验证码已显示。' : '验证码已发送。',
+      })
+      return true
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/auth/login') {
+      const body = await readBody(req)
+      const phone = normalizePhone(body.phone)
+      const code = String(body.code || '').trim()
+      const db = await readDb()
+      const inviteCheck = ensureInvite(db, body.inviteCode)
+      const savedCode = db.verificationCodes[phone]
+      if (!inviteCheck.ok) {
+        sendJson(res, 403, { error: inviteCheck.error, message: '邀请码不对。' })
+        return true
+      }
+      if (!savedCode || savedCode.expiresAt < Date.now()) {
+        sendJson(res, 400, { error: 'code_expired', message: '验证码过期了，再要一杯新的。' })
+        return true
+      }
+      if (savedCode.attempts >= 5 || savedCode.codeHash !== hashCode(code)) {
+        savedCode.attempts = Number(savedCode.attempts || 0) + 1
+        await writeDb(db)
+        sendJson(res, 400, { error: 'code_invalid', message: '验证码不对。' })
+        return true
+      }
+      const existing = findUserByPhone(db, phone)
+      const user = normalizeUser({
+        ...(existing || {}),
+        ...(body.profile || {}),
+        id: existing?.id || createId('user'),
+        phone,
+        inviteCode: inviteCheck.code,
+      })
+      db.users[user.id] = { ...(db.users[user.id] || {}), ...user }
+      markInviteUsed(db, inviteCheck.code, user.id)
+      delete db.verificationCodes[phone]
+      const token = createId('session')
+      db.sessions[token] = {
+        token,
+        userId: user.id,
+        createdAt: new Date().toISOString(),
+        expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
+      }
+      await writeDb(db)
+      sendJson(res, 200, { token, user: publicUser(user) })
+      return true
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/auth/me') {
+      const db = await readDb()
+      const auth = req.headers.authorization || ''
+      const token = auth.replace(/^Bearer\s+/i, '') || url.searchParams.get('token') || ''
+      const session = db.sessions[token]
+      if (!session || session.expiresAt < Date.now()) {
+        sendJson(res, 401, { error: 'unauthorized' })
+        return true
+      }
+      const user = db.users[session.userId]
+      if (!user) {
+        sendJson(res, 401, { error: 'user_missing' })
+        return true
+      }
+      sendJson(res, 200, { user: publicUser(user) })
+      return true
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/users') {
       const body = await readBody(req)
       const db = await readDb()
       const user = normalizeUser(body.user || body)
       db.users[user.id] = { ...(db.users[user.id] || {}), ...user }
       await writeDb(db)
-      sendJson(res, 200, { user })
+      sendJson(res, 200, { user: publicUser(user) })
       return true
     }
 

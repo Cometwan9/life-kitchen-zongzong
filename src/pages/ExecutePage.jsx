@@ -9,6 +9,7 @@ import { CREATURE } from '../components/sprites.js'
 import { BODY } from './BartenderPage.jsx'
 import { onPetStatus, startPetSync, stopPetSync, pushPetState, onPetAction } from '../engine/petBridge.js'
 import { formatDuration } from '../engine/time.js'
+import { canAutoFinalize, canCompleteTask } from '../engine/execution.js'
 
 // 按"调制手法"描述，不点名原料（茶底/奶泡留到饮品生成页才展示）
 const ACTION = {
@@ -43,6 +44,11 @@ function clock(min) {
   const h = Math.floor(safe / 60)
   const m = safe % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function briefTitle(title = '') {
+  const clean = String(title).trim()
+  return clean.length > 18 ? `${clean.slice(0, 18)}…` : clean
 }
 
 export default function ExecutePage() {
@@ -145,13 +151,6 @@ export default function ExecutePage() {
     }
   }
 
-  function shouldAutoFinalize(records) {
-    if (!state.order.length) return false
-    const touched = state.order.every((t) => records[t.id]?.status)
-    const completed = state.order.some((t) => records[t.id]?.status === 'completed')
-    return touched && completed
-  }
-
   useEffect(() => {
     if (!activeId) return
     timer.current = setInterval(() => setElapsed((e) => e + 1), 1000)
@@ -165,6 +164,7 @@ export default function ExecutePage() {
   }
 
   function completeTask(todoId, completedAt) {
+    if (!canCompleteTask({ activeId, todoId })) return
     const t = state.order.find((x) => x.id === todoId)
     if (!t) return
     const actualMin = computeActualMin(todoId, completedAt)
@@ -184,7 +184,7 @@ export default function ExecutePage() {
 
     // 同步下一状态给桌宠
     syncNextState(todoId)
-    if (shouldAutoFinalize(nextRecords)) {
+    if (canAutoFinalize({ order: state.order, records: nextRecords })) {
       dispatch({ type: 'FINALIZE' })
     }
   }
@@ -226,6 +226,7 @@ export default function ExecutePage() {
   }
 
   function finish(actualMin) {
+    if (!activeId) return
     const min = actualMin ?? Math.max(1, Math.round(elapsed / 60))
     const completedAt = Date.now()
     const id = activeId
@@ -239,13 +240,14 @@ export default function ExecutePage() {
     setElapsed(0)
     activeStartedAt.current = null
     syncNextState(id)
-    if (shouldAutoFinalize(nextRecords)) {
+    if (canAutoFinalize({ order: state.order, records: nextRecords })) {
       dispatch({ type: 'FINALIZE' })
     }
   }
 
   function skip() {
     const id = activeId
+    if (!id) return
     const nextRecords = {
       ...state.records,
       [id]: { ...state.records[id], status: 'skipped' },
@@ -255,16 +257,12 @@ export default function ExecutePage() {
     setElapsed(0)
     activeStartedAt.current = null
     syncNextState(id)
-    if (shouldAutoFinalize(nextRecords)) {
+    if (canAutoFinalize({ order: state.order, records: nextRecords })) {
       dispatch({ type: 'FINALIZE' })
     }
   }
 
   function requestFinalize() {
-    if (allTouched && hasCompleted) {
-      dispatch({ type: 'FINALIZE' })
-      return
-    }
     setConfirmGenerate(true)
   }
 
@@ -279,7 +277,6 @@ export default function ExecutePage() {
   }
 
   const statusOf = (t) => state.records[t.id]?.status
-  const allTouched = state.order.every((t) => statusOf(t))
   const completedCount = state.order.filter((t) => statusOf(t) === 'completed').length
   const hasCompleted = completedCount > 0
   const executionPlan = state.order.reduce((items, task, index) => {
@@ -318,7 +315,7 @@ export default function ExecutePage() {
               >
                 <i aria-hidden="true">{String(index + 1).padStart(2, '0')}</i>
                 <span>{clock(itemStart)}-{clock(end)}</span>
-                <strong>{task.title}</strong>
+                <strong title={task.title}>{briefTitle(task.title)}</strong>
               </button>
             )
           })}
@@ -352,8 +349,9 @@ export default function ExecutePage() {
             <div className="toolbar-title">实际执行清单</div>
             <div className="muted-note">不用按 1 到 5。计时开始后只记录真实经过的时间。</div>
           </div>
-          <button className="btn-ghost" disabled={activeId} onClick={requestFinalize}>
-            直接出杯
+          <button className="btn-ghost result-jump-action" disabled={activeId} onClick={requestFinalize}>
+            <span>{hasCompleted ? '出杯看结果 →' : '空杯看结果 →'}</span>
+            <small>{hasCompleted ? '查看最终出品' : '还没完成，会是空杯'}</small>
           </button>
         </div>
         {state.order.map((t, i) => {
@@ -366,7 +364,7 @@ export default function ExecutePage() {
             >
               <span className="idx">{i + 1}</span>
               <div className="et">
-                <div className="ettitle">{t.title}</div>
+                <div className="ettitle" title={t.title}>{briefTitle(t.title)}</div>
                 <span className="muted-note">约 {formatDuration(t.estimatedTime)}</span>
               </div>
               {st === 'completed' ? (
@@ -386,24 +384,24 @@ export default function ExecutePage() {
       <div className="btn-row">
         <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'optimize' })}>← 上一步</button>
         <div className="spacer" />
-        <button className="btn-primary" onClick={requestFinalize}>
-          {hasCompleted ? '喝一杯' : '留一只空杯'}
+        <button className="btn-primary result-final-btn" onClick={requestFinalize}>
+          {hasCompleted ? '出杯看结果 →' : '留一只空杯 →'}
         </button>
       </div>
 
       {confirmGenerate && (
         <div className="confirm-panel" role="dialog" aria-modal="true" aria-label="确认直接调配">
           <div className="confirm-card">
-            <div className="confirm-title">{hasCompleted ? '还有事项没有完成' : '还没有完成的事项'}</div>
+            <div className="confirm-title">{hasCompleted ? '现在出杯？' : '现在看空杯？'}</div>
             <p>
               {hasCompleted
-                ? '还没打勾的会留在清单里，不会算作完成。'
-                : '还没有完成项，先留一只空杯。'}
+                ? '会进入最终出品页；还没打勾的会留在清单里，不会算作完成。'
+                : '还没有完成项，结果页会显示空杯，适合只想先存个记录的时候。'}
             </p>
             <div className="btn-row">
               <button className="btn-ghost" onClick={() => setConfirmGenerate(false)}>再看看清单</button>
               <div className="spacer" />
-              <button className="btn-primary" onClick={finalizeNow}>{hasCompleted ? '喝一杯' : '留下空杯'}</button>
+              <button className="btn-primary" onClick={finalizeNow}>{hasCompleted ? '确认出杯' : '确认空杯'}</button>
             </div>
           </div>
         </div>

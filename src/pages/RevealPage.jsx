@@ -271,7 +271,7 @@ export default function RevealPage() {
     if (!card || syncingCellar) return
     dispatch({ type: 'SAVE_TO_CELLAR' })
     setSyncingCellar(true)
-    setCellarMessage('正在把这杯放上公共酒架...')
+    setCellarMessage('正在放进公共冰柜...')
     try {
       await publishDrink(card, state.userProfile)
       const drinks = await fetchPublicCellar()
@@ -298,15 +298,13 @@ export default function RevealPage() {
   const isEmptyCup = card.completionRate === 0
   const minutes = report.actualTotal || report.completedEstimated || 0
   const revealTabs = [
-    { key: 'cellar', label: '酒柜' },
+    { key: 'cellar', label: '冰柜' },
     { key: 'analysis', label: '分析' },
     { key: 'report', label: '报告' },
   ]
 
   return (
     <div>
-      <div className="reveal-banner reveal-in">{card.bartender} 给你调好了一杯</div>
-
       <div className="reveal-in" style={{ animationDelay: '.1s' }}>
         <SpecialCard card={card} bartender={bartender} reportOpen={false} />
       </div>
@@ -332,7 +330,7 @@ export default function RevealPage() {
           <div className="card reveal-in result-dashboard compact-reveal-panel" style={{ animationDelay: '.04s' }}>
             <div className="report-head">
               <div>
-                <label className="field">今日分析</label>
+                <label className="field">杯底小记</label>
                 <div className="report-title">{report.stateProfile?.title || '今天记录'}</div>
                 <p className="report-summary">{report.stateProfile?.summary || card.comment}</p>
               </div>
@@ -349,7 +347,7 @@ export default function RevealPage() {
 
             {!!report.timeTuning?.length && (
               <div className="report-section">
-                <div className="section-title">时间手感</div>
+                <div className="section-title">时间火候</div>
                 <div className="time-tuning-list">
                   {report.timeTuning.map((item) => (
                     <div className={`time-tuning ${item.direction}`} key={`${item.title}-${item.direction}`}>
@@ -368,13 +366,13 @@ export default function RevealPage() {
           <div className="card reveal-in compact-reveal-panel result-dashboard" style={{ animationDelay: '.04s' }}>
             <div className="report-head">
               <div>
-                <label className="field">今日报告</label>
-                <div className="report-title">配方揭秘</div>
+                <label className="field">今日出品</label>
+                <div className="report-title">配方小抄</div>
               </div>
             </div>
 
             <div className="report-section">
-              <div className="section-title">明天这样做</div>
+              <div className="section-title">明天少调几步</div>
               <div className="plan-notes visual-notes">
                 {(report.nextPlan || [card.suggestion]).slice(0, 3).map((note, index) => (
                   <div className="plan-note" key={note}>
@@ -386,10 +384,23 @@ export default function RevealPage() {
             </div>
 
             <div className={`memory-ticket ${isEmptyCup ? 'empty' : ''}`}>
-              <div className="section-title">记住这次</div>
+              <div className="section-title">存进今天</div>
               <p>{report.memory || card.comment}</p>
-              <small>存进冰柜后，下次会少调几步。</small>
+              <small>下次遇到相似的一天，可以从这杯开始。</small>
             </div>
+
+            {report.agentEvolution && (
+              <div className="memory-ticket evolution-ticket">
+                <div className="section-title">{report.agentEvolution.title}</div>
+                <p>{report.agentEvolution.nextDefault}</p>
+                <div className="evolution-ticket-row">
+                  {(report.agentEvolution.chips || []).map((chip) => (
+                    <span key={chip}>{chip}</span>
+                  ))}
+                </div>
+                <small>{report.agentEvolution.note}</small>
+              </div>
+            )}
           </div>
         )}
 
@@ -400,7 +411,7 @@ export default function RevealPage() {
                 <label className="field">个人冰柜</label>
               </div>
               <button className="btn-ghost cellar-save" onClick={saveToCellar} disabled={syncingCellar}>
-                {syncingCellar ? '上架中' : saved ? '已记入酒柜' : '记入酒柜'}
+                {syncingCellar ? '冷藏中' : saved ? '已放入冰柜' : '放入冰柜'}
               </button>
             </div>
             {cellarMessage && <small className="cellar-message">{cellarMessage}</small>}
@@ -410,7 +421,7 @@ export default function RevealPage() {
             <PlatformStats stats={platformStats} />
 
             <div className="report-section">
-              <div className="section-title">看看别人的酒单</div>
+              <div className="section-title">看看别人的冷藏格</div>
               <div className="community-grid">
                 {(publicCellar.length ? publicCellar : COMMUNITY_RECIPES).slice(0, 3).map((recipe) => (
                   <button className="community-card" key={recipe.id || recipe.title} type="button">
@@ -421,7 +432,7 @@ export default function RevealPage() {
                         ? `${recipe.user.locationLabel || '远方'} · ${recipe.user.name || '无名旅人'}`
                         : recipe.owner}
                     </span>
-                    <p>{recipe.note || `${recipe.bartender || '种种'}调出的 ${recipe.stars || 0} 星特调`}</p>
+                    <p>{recipe.note || `${recipe.bartender || '种种'}留下的 ${recipe.stars || 0} 星出品`}</p>
                   </button>
                 ))}
               </div>

@@ -129,8 +129,12 @@ function ResultDrink({ recipe, isEmptyCup, vessel = 'highball', bartender }) {
           <div className="drink-ice two" aria-hidden="true" />
           <div className="drink-ice three" aria-hidden="true" />
         </div>
-        <div className="drink-stem" aria-hidden="true" />
-        <div className="drink-foot" aria-hidden="true" />
+        {!isDessert && (
+          <>
+            <div className="drink-stem" aria-hidden="true" />
+            <div className="drink-foot" aria-hidden="true" />
+          </>
+        )}
       </div>
     </div>
   )
@@ -295,6 +299,27 @@ function HabitMemoryCard({ memory }) {
   )
 }
 
+function AgentEvolutionCard({ evolution }) {
+  if (!evolution) return null
+  return (
+    <div className="agent-evolution-card">
+      <div className="evolution-vial" style={{ '--evo': `${evolution.level || 0}%` }} aria-hidden="true">
+        <b />
+      </div>
+      <div>
+        <strong>{evolution.title}</strong>
+        <p>{evolution.nextDefault}</p>
+        <div className="evolution-chips">
+          {(evolution.chips || []).map((chip) => (
+            <span key={chip}>{chip}</span>
+          ))}
+        </div>
+        <small>{evolution.note}</small>
+      </div>
+    </div>
+  )
+}
+
 export default function SpecialCard({ card, bartender, reportOpen = false, onGenerateReport }) {
   const [sharing, setSharing] = useState(false)
   const [shareMessage, setShareMessage] = useState('')
@@ -307,7 +332,9 @@ export default function SpecialCard({ card, bartender, reportOpen = false, onGen
   const evoTips = report.evoTips || []
   const profile = card.userProfile || {}
   const productType = DESSERT_VESSELS.has(card.vessel) ? '甜点' : '特调'
-  const makerName = card.bartender || bartender?.name || '种种'
+  const isDessertCard = DESSERT_VESSELS.has(card.vessel)
+  const preparingText = isDessertCard ? '正在备甜' : '正在备酒'
+  const inviteText = isDessertCard ? '请朋友吃一口' : '请朋友喝一杯'
   const generatePoster = async () => {
     if (sharing) return
     setSharing(true)
@@ -366,12 +393,10 @@ export default function SpecialCard({ card, bartender, reportOpen = false, onGen
       <div className="result-frame">
         <div className="result-ribbon">
           <span />
-          <strong>Life Kitchen 酒馆信笺</strong>
+          <strong>{card.drinkName}</strong>
           <span />
         </div>
-        <div className="result-maker">{makerName} 给你做了一杯</div>
-        <div className="result-title">{card.drinkName}</div>
-        <div className="result-signature letter-signature" aria-label="酒馆信笺署名">
+        <div className="result-signature letter-signature" aria-label="出品署名">
           <span className="letter-to">To: {guestLine(profile)}</span>
           <i />
           <span className="letter-from">From: {card.bartender}</span>
@@ -402,7 +427,7 @@ export default function SpecialCard({ card, bartender, reportOpen = false, onGen
         <div className="settlement-actions">
           {!isEmptyCup && (
             <button className="poster-share-btn" type="button" disabled={sharing || pixelCardStatus === 'loading'} onClick={generatePoster}>
-              {sharing || pixelCardStatus === 'loading' ? '正在备酒' : '请朋友喝一杯'}
+              {sharing || pixelCardStatus === 'loading' ? preparingText : inviteText}
             </button>
           )}
           {shareMessage && <small className="poster-share-status">{shareMessage}</small>}
@@ -414,7 +439,7 @@ export default function SpecialCard({ card, bartender, reportOpen = false, onGen
           {!isEmptyCup && (
             <div className="poster-share-row">
               <button className="poster-share-btn" type="button" disabled={sharing} onClick={generatePoster}>
-                {sharing ? '正在备酒' : '请朋友喝一杯'}
+                {sharing ? preparingText : inviteText}
               </button>
               {shareMessage && <small className="poster-share-status">{shareMessage}</small>}
             </div>
@@ -471,6 +496,7 @@ export default function SpecialCard({ card, bartender, reportOpen = false, onGen
       )}
 
       <HabitMemoryCard memory={report.habitMemory} />
+      <AgentEvolutionCard evolution={report.agentEvolution} />
         </>
       )}
     </div>

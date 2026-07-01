@@ -69,8 +69,10 @@ const initial = {
   absorbed: [], // 已吸收的 EvoMap 经验 id
   records: {}, // todoId -> { status, actualTime, mood }
   reviewCard: null,
-  cellar: [], // 本地酒柜：保存生成过的今日特调报告
+  cellar: [], // 本地冰柜：保存生成过的今日出品报告
   userProfile: null,
+  authToken: '',
+  authUser: null,
   today: new Date().toISOString().slice(0, 10),
 }
 
@@ -132,6 +134,19 @@ function reducer(state, action) {
 
     case 'SET_USER_PROFILE':
       return { ...state, userProfile: normalizeProfile({ ...(state.userProfile || {}), ...(action.profile || {}) }) }
+
+    case 'SET_AUTH': {
+      const authUser = action.user ? normalizeProfile(action.user) : null
+      return {
+        ...state,
+        authToken: action.token || state.authToken || '',
+        authUser,
+        userProfile: authUser ? normalizeProfile({ ...(state.userProfile || {}), ...authUser }) : state.userProfile,
+      }
+    }
+
+    case 'LOGOUT':
+      return { ...state, authToken: '', authUser: null }
 
     case 'SET_WORKFLOW_MODE':
       return { ...state, workflowMode: action.mode === 'full' ? 'full' : 'quick' }
@@ -275,6 +290,8 @@ function reducer(state, action) {
         lockedBartenderId: state.lockedBartenderId,
         cellar: state.cellar,
         userProfile: state.userProfile,
+        authToken: state.authToken,
+        authUser: state.authUser,
         customBartenders: state.customBartenders,
         workflowMode: state.workflowMode || 'quick',
         today: new Date().toISOString().slice(0, 10),

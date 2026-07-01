@@ -228,15 +228,12 @@ export async function shareDrinkPoster(card) {
   }
 
   ctx.textAlign = 'center'
-  ctx.fillStyle = '#6F7FA8'
-  ctx.font = '28px Georgia, serif'
-  ctx.fillText('Life Kitchen Special', 450, 112)
-  ctx.font = '700 28px Georgia, "Songti SC", serif'
-  ctx.fillStyle = '#6F7FA8'
-  ctx.fillText(`${card.bartender || '种种'} 给你做了一杯`, 450, 152)
+  ctx.fillStyle = '#567FA1'
   ctx.font = '700 52px Georgia, "Songti SC", serif'
+  wrapText(ctx, card.drinkName || '今日出品', 450, 112, 620, 56, 2)
+  ctx.font = '700 24px Georgia, "Songti SC", serif'
   ctx.fillStyle = '#24445C'
-  ctx.fillText(card.drinkName || '今日特调', 450, 210)
+  ctx.fillText('Life Kitchen', 450, 206)
 
   ctx.save()
   ctx.translate(238, 252)
@@ -252,7 +249,7 @@ export async function shareDrinkPoster(card) {
 
   ctx.font = 'italic 23px Georgia, "Songti SC", serif'
   ctx.fillStyle = 'rgba(36,68,92,.68)'
-  ctx.fillText(`To: ${guestLine(card)}`, 450, 210)
+  ctx.fillText(`To: ${guestLine(card)}`, 450, 238)
   ctx.fillText(`From: ${card.bartender || '种种'}`, 450, 238)
 
   drawPosterDrink(ctx, layers, palette)

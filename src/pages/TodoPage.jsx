@@ -47,7 +47,7 @@ const ASSISTANT_MODES = {
     redo: '重新拆解',
     paper: '长期酿造纸',
     next: '生成今日推进安排 →',
-    note: (count) => `种种从长期目标里拆出了 ${count} 个今日推进动作，后续可以存进你的酒柜记录。`,
+    note: (count) => `种种从长期目标里拆出了 ${count} 个今日推进动作，后续可以存进你的冰柜记录。`,
     placeholder: '我想在一个月内把作品集整理出来，但现在材料很散，也不知道每天该推进什么。今天只有一小时，可以先做哪几步？',
   },
 }
@@ -388,7 +388,7 @@ export default function TodoPage() {
     setBottling(true)
     window.setTimeout(() => {
       dispatch({ type: 'GO', step: 'optimize' })
-    }, 780)
+    }, 360)
   }
 
   function setTodoTime(todo, minutes) {
@@ -534,7 +534,7 @@ export default function TodoPage() {
       <h2 className="title">{isQuickMode ? '今天要做什么？' : modeConfig.title}</h2>
       <p className="subtitle">{isQuickMode ? '写一段话就好，我会整理成能直接执行的清单。' : modeConfig.subtitle}</p>
 
-      {!isQuickMode && <div className="assistant-mode-tabs" role="tablist" aria-label="选择种种助理模式">
+      <div className={`assistant-mode-tabs ${isQuickMode ? 'quick-visible' : ''}`} role="tablist" aria-label="选择种种助理模式">
         {Object.entries(ASSISTANT_MODES).map(([key, item]) => (
           <button
             key={key}
@@ -553,7 +553,7 @@ export default function TodoPage() {
             <span>{key === 'daily' ? '安排今天' : key === 'free_time' ? '用好空档' : '拆长期目标'}</span>
           </button>
         ))}
-      </div>}
+      </div>
 
       <div className={`talk-seat ${isQuickMode ? 'quick-talk-seat' : ''}`}>
         {!isQuickMode && <div className={`bar-talk mode-${mode}`}>
@@ -621,43 +621,9 @@ export default function TodoPage() {
               </div>
               <div className="muted-note">{isQuickMode ? '确认后就可以开始。' : modeConfig.note(todos.length)}</div>
             </div>
-            {!isQuickMode && <button
-              className={`scroll-toggle ${recipeCollapsed ? 'is-rolled' : 'is-open'}`}
-              type="button"
-              onClick={() => setRecipeCollapsed((v) => !v)}
-              disabled={bottling}
-              aria-label={recipeCollapsed ? '展开配料纸' : '卷起配料纸'}
-            >
-              <span className="roll-handle" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-            </button>}
           </div>
 
-          {!isQuickMode && recipeCollapsed ? (
-            <button
-              className="scroll-roll recipe-counter-stage"
-              type="button"
-              onClick={bottleRecipe}
-              disabled={bottling}
-              aria-label="把今日清单递交到吧台，进入调配酒单"
-            >
-              <span className="counter-window" aria-hidden="true">
-                <span className="counter-arch" />
-                <span className="counter-slot" />
-                <span className="counter-bell" />
-              </span>
-              <span className="rolled-paper order-ticket" aria-hidden="true">
-                <span className="paper-band" />
-              </span>
-              <span className="roll-shadow" aria-hidden="true" />
-              <span className="counter-hint">{bottling ? '吧台收单中…' : '点击把清单递给吧台'}</span>
-            </button>
-          ) : (
-            <>
-              <div className="ingredient-paper">
+          <div className="ingredient-paper">
                 {todos.map((t, index) => {
                   const tone = getTaskTone(t.taskType)
                   return (
@@ -699,19 +665,23 @@ export default function TodoPage() {
                     </button>
                   </div>
                 )})}
-              </div>
-              <div className="btn-row" style={{ marginTop: 12 }}>
-                <div className="spacer" />
-                <button
-                  className="btn-primary"
-                  disabled={!todos.length}
-                  onClick={() => dispatch({ type: 'GO', step: 'optimize' })}
-                >
-                  {isQuickMode ? '开始今天 →' : modeConfig.next}
-                </button>
-              </div>
-            </>
-          )}
+          </div>
+          <div className="scroll-action-dock" aria-label="提交今日清单">
+            <button
+              className="service-bell-submit text-submit"
+              type="button"
+              onClick={isQuickMode ? () => dispatch({ type: 'GO', step: 'optimize' }) : bottleRecipe}
+              disabled={!todos.length || bottling}
+              aria-label="把今日清单递给吧台，进入下一步"
+            >
+              <span className="service-bell-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              <strong>{bottling ? '交给吧台中' : isQuickMode ? '开始' : '交给吧台'}</strong>
+            </button>
+          </div>
         </div>
       )}
 

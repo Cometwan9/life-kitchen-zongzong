@@ -6,8 +6,14 @@ async function request(path, options = {}) {
       ...(options.headers || {}),
     },
   })
-  if (!res.ok) throw new Error(`Cellar API ${res.status}`)
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const error = new Error(data.message || data.error || `Cellar API ${res.status}`)
+    error.status = res.status
+    error.data = data
+    throw error
+  }
+  return data
 }
 
 export async function saveUserProfile(user) {
@@ -72,4 +78,26 @@ export async function fetchReviewReport(userId, period = 'day') {
 export async function fetchCellarStats() {
   const data = await request('/api/stats')
   return data.stats
+}
+
+export async function sendLoginCode({ phone, inviteCode }) {
+  return request('/api/auth/send-code', {
+    method: 'POST',
+    body: JSON.stringify({ phone, inviteCode }),
+  })
+}
+
+export async function loginWithPhoneCode({ phone, code, inviteCode, profile }) {
+  return request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code, inviteCode, profile }),
+  })
+}
+
+export async function fetchCurrentUser(token) {
+  if (!token) return null
+  const data = await request('/api/auth/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return data.user
 }

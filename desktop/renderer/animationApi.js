@@ -1,9 +1,9 @@
 ;(function (root) {
   const spritePlans = {
     idle: {
-      name: 'bob',
-      keyframes: [{ transform: 'translateY(0)' }, { transform: 'translateY(-6px)' }, { transform: 'translateY(0)' }],
-      timing: { duration: 1600, iterations: Infinity, easing: 'steps(2)' },
+      name: 'still',
+      keyframes: [{ transform: 'translateY(0)' }, { transform: 'translateY(0)' }],
+      timing: { duration: 1, iterations: 1, easing: 'linear' },
     },
     done: {
       name: 'bob',
@@ -14,22 +14,22 @@
       name: 'focusBreathe',
       keyframes: [
         { transform: 'translateY(0) scale(1)' },
-        { transform: 'translateY(-2px) scale(1.01)' },
+        { transform: 'translateY(0) scale(1.004)' },
         { transform: 'translateY(0) scale(1)' },
       ],
-      timing: { duration: 3200, iterations: Infinity, easing: 'ease-in-out' },
+      timing: { duration: 6800, iterations: Infinity, easing: 'ease-in-out' },
     },
   }
 
   const petPlans = {
     idle: {
-      name: 'breathe',
+      name: 'quietIdle',
       keyframes: [
         { transform: 'translateY(0) scale(1)' },
-        { transform: 'translateY(-4px) scale(1.025)' },
+        { transform: 'translateY(0) scale(1.004)' },
         { transform: 'translateY(0) scale(1)' },
       ],
-      timing: { duration: 1800, iterations: Infinity, easing: 'ease-in-out' },
+      timing: { duration: 5200, iterations: Infinity, easing: 'ease-in-out' },
     },
     done: {
       name: 'celebrate',
@@ -45,10 +45,10 @@
       name: 'quietFocus',
       keyframes: [
         { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
-        { transform: 'translateY(-2px) scale(1.01)', filter: 'brightness(1.025)' },
+        { transform: 'translateY(0) scale(1.004)', filter: 'brightness(1.01)' },
         { transform: 'translateY(0) scale(1)', filter: 'brightness(1)' },
       ],
-      timing: { duration: 3600, iterations: Infinity, easing: 'ease-in-out' },
+      timing: { duration: 7200, iterations: Infinity, easing: 'ease-in-out' },
     },
     choosing: {
       name: 'summonPulse',

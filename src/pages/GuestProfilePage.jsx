@@ -64,7 +64,7 @@ export default function GuestProfilePage({ onStart }) {
         <div className="guest-heading">
           <span>今日酒馆签</span>
           <h1>先把座位留给你</h1>
-          <p>这些信息只会用在最后的签文和酒柜存档里。</p>
+          <p>这些信息只会用在最后的签文和冰柜存档里。</p>
         </div>
 
         <label className="guest-field">

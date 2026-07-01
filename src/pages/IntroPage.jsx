@@ -7,7 +7,7 @@ export default function IntroPage({ onQuickStart, onFullStart }) {
   const enterTavern = () => {
     if (entering) return
     setEntering(true)
-    window.setTimeout(onFullStart, 360)
+    window.setTimeout(onFullStart, 460)
   }
 
   return (

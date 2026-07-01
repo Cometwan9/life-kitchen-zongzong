@@ -50,72 +50,72 @@ const BARTENDER_SPECIALS = {
     title: '随手加料',
     method: '先从轻的一口开始。',
     bestWith: ['admin', 'recovery', 'creative'],
-    caution: '自由度高的时候，要在最后补一个收口，不然方法很难留进酒柜。',
+    caution: '自由度高的时候，要在最后补一个收口，不然方法很难留进冰柜。',
   },
 }
 
 const BARTENDER_REVIEW_VOICES = {
   rosemary: {
-    title: '迷迭香把主线留在杯底',
+    title: '吧台边的主线批注',
     line: ({ heaviest, overrun }) =>
       overrun.length
-        ? `她会把${heaviest?.name || '主线'}往前挪，先做完最重的一口，再让小事排队。`
-        : `她认得出今天最稳的味道：${heaviest?.name || '主线'}够清楚，可以留成明天的开场。`,
+        ? `先别急着把所有事都端上来。${heaviest?.name || '主线'}这口太重，明天我会把它放到最前面，小事等它结束再排队。`
+        : `${heaviest?.name || '主线'}今天站得住。明天照这个开场来，别让碎事先摸到杯底。`,
     actions: ({ missing, overrun }) => [
-      overrun.length ? '同类任务预估加 15 分钟' : '明天第一段继续留给主线',
-      missing.length ? '最后补一个 5 分钟收口' : '碎事集中到一个时段',
+      overrun.length ? '主线多留 15 分钟' : '第一段留给主线',
+      missing.length ? '最后补 5 分钟收口' : '碎事集中一盘',
     ],
   },
   ginger: {
-    title: '姜种种先点火',
+    title: '先把火点起来',
     line: ({ completionRate }) =>
-      completionRate < 0.5 ? '他会把第一步切到小到不能再小，先让今天真的动起来。' : '他喜欢今天这种起步速度，下一杯可以继续从短任务热身。',
+      completionRate < 0.5 ? '别坐着等状态来。明天第一步我给你切到十分钟，热锅先响，后面的事才会跟上。' : '今天开火不慢。下次还是先用一件短事热锅，别一上来就硬炖大菜。',
     actions: ({ overrun }) => [
-      '开局只放 10 分钟启动块',
-      overrun.length ? '冲刺后马上加短休息' : '完成后立刻接主任务',
+      '开局 10 分钟',
+      overrun.length ? '冲刺后降温' : '热身后接主菜',
     ],
   },
   mint: {
-    title: '薄荷种种会先看你累不累',
+    title: '先留一口凉的',
     line: ({ missing }) =>
-      missing.includes('恢复奶泡') ? '她会把休息写进清单里，不让你靠硬撑把整杯喝完。' : '她觉得今天的节奏没有太冲，适合把缓冲继续保留下来。',
+      missing.includes('恢复奶泡') ? '你今天有点把自己煮干了。明天我会把休息写进清单里，不许它再被当成“有空再说”。' : '今天没有太冲，这样挺好。缓冲别删掉，它不是偷懒，是让下一口还能喝下去。',
     actions: ({ overrun }) => [
-      overrun.length ? '长任务后固定休息 10 分钟' : '保留一个喝水或散步点',
-      '晚上别再塞新主线',
+      overrun.length ? '长任务后休 10 分钟' : '保留喝水点',
+      '晚上不塞新主线',
     ],
   },
   lemon: {
-    title: '柠檬种种要入口清楚',
-    line: ({ heaviest }) => `她会把${heaviest?.name || '今天的任务'}说短一点，先删掉绕路，再开始。`,
+    title: '把话切短一点',
+    line: ({ heaviest }) => `${heaviest?.name || '这件事'}别再写成一坨了。明天我只留一个动词，一个入口，酸一点，但清楚。`,
     actions: ({ overrun }) => [
-      '每个任务只写一个动词',
-      overrun.length ? '超过预估就切下一段' : '先做最清爽的一件',
+      '每项只留一个动词',
+      overrun.length ? '超时就切段' : '先做清爽一件',
     ],
   },
   garlic: {
-    title: '葱蒜种种守住边界',
+    title: '门我来守',
     line: ({ heaviest }) =>
       heaviest?.category === 'communication' || heaviest?.category === 'admin'
-        ? '她会把消息和杂事挡在同一个盘子里，不让它们一口一口咬走你。'
-        : '她觉得今天主线还没被切碎，明天继续把打扰收成一盘。',
-    actions: () => ['消息集中两次处理', '深度任务时段不开新入口'],
+        ? '消息和杂事今天咬了你太多口。明天我把它们收进同一个盘子，别让它们到处跑。'
+        : '今天主线还没被切碎，保持。明天继续关一段门，谁敲都先等着。',
+    actions: () => ['消息集中两次', '主线时段不开口'],
   },
   cilantro: {
-    title: '香菜种种先找顺手入口',
+    title: '先挑顺手的那口',
     line: ({ missing }) =>
-      missing.length ? '他不会逼你照单全收，会先挑一件顺手的，再提醒你最后收一下尾。' : '他觉得今天的自由度刚好，适合把这个入口记下来。',
-    actions: () => ['先做最轻的一件', '结束前留一句复盘'],
+      missing.length ? '不用把清单当命令。明天先挑最顺手的一件，做完再看下一口；不过最后要留一句收尾，别偷偷溜走。' : '今天这个入口挺顺。下次还从这里进，别一开始就把自己绑住。',
+    actions: () => ['先做最轻一件', '结束留一句'],
   },
   osmanthus: {
-    title: '桂花种种慢慢收香',
-    line: () => '她会把今天做成不刺眼的节奏：少一点催促，多一点能留香的收尾。',
-    actions: () => ['保留温和开场', '把复盘写成一句酒签'],
+    title: '慢慢把香气收住',
+    line: () => '今天不用被催得那么响。明天我给你留一个温和开场，收尾写一句就够，让这份出品有余味。',
+    actions: () => ['温和开场', '一句收尾'],
   },
   chili: {
-    title: '辣椒种种只点关键火',
+    title: '火只点在关键处',
     line: ({ overrun }) =>
-      overrun.length ? '它会把火收回来一点，别让整天都变成冲刺。' : '它会把劲儿用在最关键的那一步，别到处乱烧。',
-    actions: () => ['只给一件事开冲刺', '冲刺后马上降温'],
+      overrun.length ? '今天火开太久了，辣是辣，但会糊。明天只给一件事开冲刺，做完立刻降温。' : '劲儿别到处撒。明天还是抓最关键那一下，烧准一点。',
+    actions: () => ['只冲刺一件', '结束马上降温'],
   },
 }
 
@@ -184,7 +184,7 @@ function getManagementRelation({ recipe, bartender, heaviest, missing, overrun, 
   if (overrun.length || timeAccuracy < 0.65) points.push('时间偏紧')
   if (!overrun.length && underrun.length) points.push('预估可缩短')
   if (completionRate >= 0.8 && timeAccuracy >= 0.75 && !missing.length) {
-    points.push('可存酒柜')
+    points.push('可存冰柜')
   }
   return {
     title: '今天的节奏',
@@ -195,31 +195,31 @@ function getManagementRelation({ recipe, bartender, heaviest, missing, overrun, 
 function makeStateProfile({ isEmptyCup, completionRate, timeAccuracy, overrun, missing, heaviest }) {
   if (isEmptyCup) {
     return {
-      title: '空杯状态',
-      summary: '今天还没有完成记录。明天只放一件小事，先让杯底有第一层。',
+      title: '今天还没开杯',
+      summary: '先不评价。明天只放一件很小的事，让杯底先有第一层味道。',
     }
   }
   if (completionRate >= 0.8 && timeAccuracy >= 0.75 && !missing.length) {
     return {
-      title: '稳定出杯',
-      summary: '完成度和时间感都稳。这个顺序可以存起来，下次直接沿用。',
+      title: '这杯很稳',
+      summary: '今天的顺序是顺手的，时间也没跑太远。下次可以直接沿用这个开场。',
     }
   }
   if (overrun.length >= 2 || timeAccuracy < 0.55) {
     return {
-      title: '时间偏紧',
-      summary: '有几件事比预想更久。下次同类任务先加一点余量。',
+      title: '火候偏满',
+      summary: '有几件事比想象中更占火。下次同类任务先多留一点气口。',
     }
   }
   if (missing.length) {
     return {
-      title: '缺少缓冲',
-      summary: `主线是${heaviest?.name || '今天的任务'}，但缓冲不够。明天别把休息放到最后才想起。`,
+      title: '少了一口缓冲',
+      summary: `今天主味是${heaviest?.name || '这件事'}，但中间太少喘口气。明天别把休息挤到最后。`,
     }
   }
   return {
-    title: '结构成形',
-    summary: '今天的顺序已经成形。下一次可以少调几步，直接从这杯开始。',
+    title: '顺序成形',
+    summary: '今天已经跑出一条可用顺序。下一次少调几步，从这份出品继续。',
   }
 }
 
@@ -257,7 +257,7 @@ function makeFlavorTuning({ recipe, timeAccuracy, completionRate, missing, overr
   if (sweetness <= 24) tuning.push('甜度偏低：加入明确休息、喝水或散步，不要等耗尽才恢复。')
   if (finish <= 32 || missing.includes('肉桂封口')) tuning.push('收口不足：最后留 5 分钟复盘，让这杯酒下次能复刻。')
   if (overrun.length) tuning.push('火候偏长：同类任务预估上调 20%，别让计划表太乐观。')
-  if (!tuning.length) tuning.push('比例稳定：这杯可以存进酒柜，作为下次的基础配方。')
+  if (!tuning.length) tuning.push('比例稳定：这份出品可以存进冰柜，作为下次的基础配方。')
   return [
     { key: 'concentration', label: '主线压力', value: concentration, target: concentration > 70 ? '需要切小' : '可以保持' },
     { key: 'sweetness', label: '恢复余量', value: sweetness, target: sweetness < 30 ? '要补休息' : '余量够用' },
@@ -324,7 +324,7 @@ function makeHabitMemory({ recipe, heaviest, missing, overrun, underrun, complet
     return {
       title: '还没记入口味',
       chips: ['先完成一件', '记录启动时间', '明天再调'],
-      note: '空杯不评价，只记一个入口。',
+      note: '空杯不打分，只记一个入口。',
     }
   }
   const chips = []
@@ -336,8 +336,180 @@ function makeHabitMemory({ recipe, heaviest, missing, overrun, underrun, complet
   return {
     title: '下次默认记住',
     chips: chips.slice(0, 4),
-    note: `已记住 ${completedCount} 个完成样本。下次会先按这杯的顺序起步。`,
+    note: `这次记住 ${completedCount} 个完成样本。下次会先按这个顺序起步，再让种种微调。`,
     palette: recipe.slice(0, 4).map((r) => r.color),
+  }
+}
+
+function makeBartenderComment({ bartender, isEmptyCup, completionRate, heaviest, missing, overrun }) {
+  const key = bartenderKey(bartender)
+  const main = heaviest?.name || '今天这杯'
+  const stable = completionRate >= 0.8 && !overrun.length && !missing.length
+  if (isEmptyCup) {
+    const emptyLines = {
+      rosemary: '今天先不端上桌。明天挑一件最该先做的，我替你压住场。',
+      ginger: '锅还没热。明天别想太久，先用十分钟把第一口炒出来。',
+      mint: '今天这杯先放着。明天从轻一点的事开始，别一上来就把自己泡皱。',
+      lemon: '空杯没关系。明天只写一个动作，短一点，清楚一点。',
+      garlic: '今天先关门。明天我守着入口，你只放一件真的要做的事进来。',
+      cilantro: '那就先不装满。明天随手挑一件，看顺不顺口再说。',
+      osmanthus: '今天香气还没落杯。明天从一件温和的小事开始。',
+      chili: '火还没点。明天只冲一件，冲完就收。',
+    }
+    return emptyLines[key] || emptyLines.mint
+  }
+  const lines = {
+    rosemary: stable
+      ? `${main}今天压得住场。明天继续让主线先上桌，碎事别抢开场。`
+      : `${main}有点占杯。明天我先替它留位，小事晚一点再端。`,
+    ginger: overrun.length
+      ? `今天火开得久了点。${main}可以先切小，热起来就别硬烧。`
+      : `今天起势不差。明天还是先点一小段火，再接主菜。`,
+    mint: missing.includes('恢复奶泡')
+      ? `你今天太少给自己留凉口。${main}之后要休一下，不然下一口会涩。`
+      : `今天没有把自己逼太紧。这个节奏可以留着，喝水和停顿别删。`,
+    lemon: `${main}可以更利落。明天每件事只留一个入口，别让句子拖住手。`,
+    garlic: heaviest?.category === 'communication' || heaviest?.category === 'admin'
+      ? '消息和杂事今天跑得太散。明天我把它们收成一盘，别让它们满场乱窜。'
+      : `${main}还算完整。明天继续留一段不被敲门的时间。`,
+    cilantro: stable
+      ? '今天这口挺顺，别把它改复杂。下次从最顺手的地方开局。'
+      : '不用把清单当军令。先挑能动起来的一口，做完再换下一口。',
+    osmanthus: stable
+      ? '今天收得很温柔。明天照这个香气来，最后仍然留一句收尾。'
+      : `今天的香气有点散。${main}要慢慢放稳，别急着全倒进去。`,
+    chili: overrun.length
+      ? '今天辣得有点过头。明天只给关键事开火，做完马上降温。'
+      : '今天有劲儿。明天别到处撒火，抓最要紧那一下就够。',
+  }
+  return lines[key] || lines.mint
+}
+
+function makeBartenderSuggestion({ bartender, isEmptyCup, missing, overrun, underrun, heaviest }) {
+  const key = bartenderKey(bartender)
+  if (isEmptyCup) {
+    const starts = {
+      rosemary: '明天第一杯：只排一件主线，完成后再加小料。',
+      ginger: '明天第一步：开一个 10 分钟短火，不等状态。',
+      mint: '明天第一步：选最轻的一件，旁边留一口休息。',
+      lemon: '明天第一步：把任务改成一个动词，越短越好。',
+      garlic: '明天第一步：先关掉打断，再开始。',
+      cilantro: '明天第一步：随手挑一件，做完再决定下一口。',
+      osmanthus: '明天第一步：温和开场，别把清单倒满。',
+      chili: '明天第一步：只冲一件，别分火。',
+    }
+    return starts[key] || starts.mint
+  }
+  if (overrun.length) {
+    const overtime = {
+      rosemary: `${heaviest?.name || '主线'}下次多留一格时间，别让它挤坏后面的味道。`,
+      ginger: '同类任务先切成两段，第一段只负责起火。',
+      mint: '长任务后面补一段空白，不然会越做越钝。',
+      lemon: '超时的事改成两句短指令，别一口吞。',
+      garlic: '容易拖长的事先挡住外界消息，做完再开门。',
+      cilantro: '超时就换成小步走，别跟它硬耗。',
+      osmanthus: '把慢任务提早一点，给它留香气散开的时间。',
+      chili: '冲刺只留给一件事，其他都别跟着烧。',
+    }
+    return overtime[key] || overtime.mint
+  }
+  if (missing.includes('恢复奶泡')) {
+    const rest = {
+      rosemary: '主线后面必须留缓冲，不然整张酒单会塌。',
+      ginger: '冲完要降温，休息不是拖慢，是防止糊锅。',
+      mint: '休息写进清单里，别等累了才想起来。',
+      lemon: '加一个短暂停顿，让下一件事入口更清楚。',
+      garlic: '恢复时间也要守住，别让别人顺手拿走。',
+      cilantro: '中间塞一口轻的，清单会更好继续。',
+      osmanthus: '留一段安静，香气才收得住。',
+      chili: '火太密会辣到自己，记得留降温段。',
+    }
+    return rest[key] || rest.mint
+  }
+  if (underrun.length) {
+    return key === 'ginger' || key === 'chili'
+      ? '有些事比想象快，下次可以用它们做开场热身。'
+      : '提前完成的事可以存成短配方，下次别给它留太满。'
+  }
+  const keep = {
+    rosemary: '今天前三步可以留作固定开场。',
+    ginger: '保留今天的起势，别把开局改得太重。',
+    mint: '这个节奏挺舒服，明天照着来就好。',
+    lemon: '保持清爽，不要再加太多说明。',
+    garlic: '边界守得住，明天继续集中处理碎事。',
+    cilantro: '顺手的入口留住，别过度整理。',
+    osmanthus: '今天的余味可以存起来。',
+    chili: '劲儿用得准，明天继续只冲关键点。',
+  }
+  return keep[key] || keep.mint
+}
+
+function makeBartenderMemoryLine({ bartender, completedCount, heaviest, isEmptyCup }) {
+  const key = bartenderKey(bartender)
+  if (isEmptyCup) {
+    const empty = {
+      rosemary: '今晚先不入档，等第一件主线落杯。',
+      ginger: '我先记住：你需要一个能立刻开火的入口。',
+      mint: '我先记住：明天要从轻一点开始。',
+      lemon: '我先记住：下次入口要更短。',
+      garlic: '我先记住：先挡打断，再开工。',
+      cilantro: '我先记住：别逼太满，先挑顺手的。',
+      osmanthus: '我先记住：从温和的小事开始。',
+      chili: '我先记住：只点一处火。',
+    }
+    return empty[key] || empty.mint
+  }
+  const main = heaviest?.name || '今天的主味'
+  const done = completedCount || 0
+  const lines = {
+    rosemary: `已记住：${main}适合放在前段，今天完成 ${done} 件。`,
+    ginger: `已记住：你开局需要一点热度，今天完成 ${done} 件。`,
+    mint: `已记住：你需要缓冲跟着主线走，今天完成 ${done} 件。`,
+    lemon: `已记住：短入口更适合你，今天完成 ${done} 件。`,
+    garlic: `已记住：碎事要集中守门，今天完成 ${done} 件。`,
+    cilantro: `已记住：顺手开局比较适合你，今天完成 ${done} 件。`,
+    osmanthus: `已记住：温和收尾会让你更容易复刻，今天完成 ${done} 件。`,
+    chili: `已记住：关键冲刺有效，但要及时降温，今天完成 ${done} 件。`,
+  }
+  return lines[key] || lines.mint
+}
+
+function makeAgentEvolution({ bartender, completedCount, heaviest, missing, overrun, underrun, timeAccuracy, isEmptyCup }) {
+  const key = bartenderKey(bartender)
+  const main = heaviest?.name || '今天的主味'
+  if (isEmptyCup) {
+    return {
+      title: '先记一个入口',
+      level: 12,
+      nextDefault: '明天只放一件小事',
+      chips: ['入口', '启动', '轻一点'],
+      note: makeBartenderMemoryLine({ bartender, completedCount, heaviest, isEmptyCup }),
+    }
+  }
+  const chips = []
+  if (heaviest?.name) chips.push(`${main}优先`)
+  if (overrun.length) chips.push('同类加时')
+  if (underrun.length) chips.push('缩短预估')
+  if (missing.includes('恢复奶泡')) chips.push('补休息')
+  if (missing.includes('肉桂封口')) chips.push('补收口')
+  if (!chips.length) chips.push('可直接复用')
+
+  const roleLine = {
+    rosemary: `下次我会先替${main}留座，杂事晚点上桌。`,
+    ginger: `下次我会先给你一个短开火，再接${main}。`,
+    mint: `下次我会在${main}后面留一口空白，不让你硬撑。`,
+    lemon: `下次我会把入口切短，先让${main}变清楚。`,
+    garlic: `下次我会先挡住打断，再让${main}进场。`,
+    cilantro: `下次我会先挑顺手的一口，再慢慢加料。`,
+    osmanthus: `下次我会把开场放轻，收尾留一点余味。`,
+    chili: `下次我会只给关键处点火，做完立刻降温。`,
+  }
+  return {
+    title: '下次少调几步',
+    level: Math.min(96, 38 + completedCount * 10 + Math.round(timeAccuracy * 18) + chips.length * 4),
+    nextDefault: roleLine[key] || roleLine.mint,
+    chips: chips.slice(0, 4),
+    note: `已记住 ${completedCount} 个完成样本，下一次会先按这杯的手感排。`,
   }
 }
 
@@ -386,27 +558,27 @@ function makeReport({ todos, recipe, records, completionRate, timeAccuracy, isEm
 
   const nextPlan = []
   if (isEmptyCup) {
-    nextPlan.push('明天只设一个 10 到 15 分钟的启动任务，先让杯底出现第一层。')
+    nextPlan.push('明天只放一件 10-15 分钟的小事。')
   } else {
     if (heaviest?.category === 'admin' || heaviest?.category === 'communication') {
-      nextPlan.push('把零散沟通和杂事合并成两个固定时段，别让它们占满整杯。')
+      nextPlan.push('消息和杂事合并成两段处理。')
     }
     if (heaviest?.category === 'deep_work' || heaviest?.category === 'creative') {
-      nextPlan.push('保留今天的主线，但在长任务后面加一段短恢复，避免杯身太浓。')
+      nextPlan.push('主线保留，长任务后加一段短休息。')
     }
     if (overrun.length) {
-      nextPlan.push('同类任务明天按实际用时多预留 20%，先降低时间估计带来的压力。')
+      nextPlan.push('超时的同类任务，明天先多留 20%。')
     }
     if (!overrun.length && underrun.length) {
-      nextPlan.push('把明显提前完成的任务预估下调一点，别让计划表虚胖；省下的时间留给收口或缓冲。')
+      nextPlan.push('提前完成的任务，下次可以调轻一点。')
     }
     if (missing.includes('恢复奶泡')) {
-      nextPlan.push('给明天安排一个明确的回神点，比如散步、整理桌面或短休息。')
+      nextPlan.push('加一个回神点：喝水、走动或整理桌面。')
     }
     if (missing.includes('肉桂封口')) {
-      nextPlan.push('最后留 5 分钟写下今天有效的方法，酒柜里才会留下可复用配方。')
+      nextPlan.push('最后留 5 分钟收口，记下有效做法。')
     }
-    if (!nextPlan.length) nextPlan.push('维持今天的顺序，把最有效的前三步记成自己的固定调配法。')
+    if (!nextPlan.length) nextPlan.push('保留今天最顺的前三步。')
   }
 
   return {
@@ -449,6 +621,16 @@ function makeReport({ todos, recipe, records, completionRate, timeAccuracy, isEm
       completedCount: completedRecords.length,
       isEmptyCup,
     }),
+    agentEvolution: makeAgentEvolution({
+      bartender,
+      completedCount: completedRecords.length,
+      heaviest,
+      missing,
+      overrun,
+      underrun,
+      timeAccuracy,
+      isEmptyCup,
+    }),
     timeTuning: [...overrun, ...underrun].slice(0, 4).map((r) => {
       const todo = todos.find((t) => t.id === r.todoId)
       const diff = r.actualTime - r.estimatedTime
@@ -458,13 +640,16 @@ function makeReport({ todos, recipe, records, completionRate, timeAccuracy, isEm
         actualTime: r.actualTime,
         direction: diff > 0 ? 'over' : 'under',
         note: diff > 0
-          ? `比计划多 ${formatDuration(diff)}，下次这类任务要加量。`
-          : `比计划少 ${formatDuration(Math.abs(diff))}，下次可以调轻一点。`,
+          ? `多用了 ${formatDuration(diff)}，下次先加一点余量。`
+          : `少用了 ${formatDuration(Math.abs(diff))}，下次可以调轻一点。`,
       }
     }),
-    memory: isEmptyCup
-      ? '空杯也会留下记录：明天先完成一件最小的事。'
-      : `${stateProfile.title}：完成 ${completedRecords.length} 件事，主线是${heaviest?.name || '今天的任务'}。`,
+    memory: makeBartenderMemoryLine({
+      bartender,
+      completedCount: completedRecords.length,
+      heaviest,
+      isEmptyCup,
+    }),
   }
 }
 
@@ -507,21 +692,23 @@ export function buildReviewCard({ date, todos, ingredients, recipe, bartender, d
         : `「${title}」预估 ${formatDuration(r.estimatedTime)}，实际只用了 ${formatDuration(r.actualTime)}，比想象快。`
     })
 
-  let comment = `${bartender.name}：今天完成率 ${Math.round(completionRate * 100)}%。`
-  if (isEmptyCup) comment += '还没有真正完成的心事片段被调进杯底，所以这里只是一只空杯。'
-  else {
-    if (overrun.length) comment += `有任务实际用时明显超预期，${heaviest?.name || '主茶底'}偏浓。`
-    if (missing.length) comment += `缺了${missing.join('、')}，整杯偏紧。`
-    if (!overrun.length && !missing.length) comment += '结构匀称，是杯耐喝的特调。'
-  }
+  const comment = makeBartenderComment({
+    bartender,
+    isEmptyCup,
+    completionRate,
+    heaviest,
+    missing,
+    overrun,
+  })
 
-  const suggestion = isEmptyCup
-    ? '先挑一件最小的事完成，让明天的杯底有第一层味道。'
-    : overrun.length
-    ? '明天类似深度任务建议多预留 20% 时间。'
-    : missing.includes('恢复奶泡')
-    ? '明天在高强度任务后固定加一段恢复缓冲。'
-    : '保持今天的节奏，注意复盘收口。'
+  const suggestion = makeBartenderSuggestion({
+    bartender,
+    isEmptyCup,
+    missing,
+    overrun,
+    underrun,
+    heaviest,
+  })
 
   return {
     date,
