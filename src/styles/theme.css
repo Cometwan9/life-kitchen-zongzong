@@ -9030,7 +9030,7 @@ label.field { display: block; font-size: 16px; color: var(--muted); margin: 8px 
 .intro-actions {
   position: absolute;
   left: 50%;
-  top: 52%;
+  top: min(72svh, calc(100svh - 118px));
   bottom: auto;
   transform: translateX(-50%);
   width: auto;
@@ -9186,7 +9186,7 @@ label.field { display: block; font-size: 16px; color: var(--muted); margin: 8px 
   }
   .intro-actions {
     left: 50%;
-    top: 54%;
+    top: min(74svh, calc(100svh - 108px));
     width: auto;
     margin-bottom: 0;
     transform: translateX(-50%);
