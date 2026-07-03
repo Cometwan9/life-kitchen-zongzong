@@ -268,6 +268,7 @@ function reducer(state, action) {
       reviewCard.vessel = state.customVesselLabel ? (state.drinkVessel || 'custom') : chooseVesselForRecipe(finalRecipe, state.assistantMode)
       reviewCard.customVesselLabel = state.customVesselLabel || ''
       reviewCard.userProfile = state.userProfile
+      reviewCard.records = records
       return { ...state, reviewCard, ingredients: finalIngredients, recipe: finalRecipe, drinkName: finalDrinkName, step: 'reveal' }
     }
 

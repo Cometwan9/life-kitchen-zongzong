@@ -1,6 +1,7 @@
 import { useStore, STEPS } from './store/store.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { pushPetState, startActionPoll, stopActionPoll, onPetAction } from './engine/petBridge.js'
+import { recordEvent } from './engine/cellarApi.js'
 import LoginPage from './pages/LoginPage.jsx'
 import IntroPage from './pages/IntroPage.jsx'
 import GuestProfilePage from './pages/GuestProfilePage.jsx'
@@ -9,6 +10,7 @@ import TodoPage from './pages/TodoPage.jsx'
 import OptimizePage from './pages/OptimizePage.jsx'
 import ExecutePage from './pages/ExecutePage.jsx'
 import RevealPage from './pages/RevealPage.jsx'
+import OpsPage from './pages/OpsPage.jsx'
 import stepSummonIcon from '../assets/step-icons/step-1-summon.png'
 import stepChatIcon from '../assets/step-icons/step-2-chat.png'
 import stepRecipeIcon from '../assets/step-icons/step-3-recipe.png'
@@ -33,6 +35,7 @@ const PAGES = {
 
 export default function App() {
   const { state, dispatch } = useStore()
+  const isOpsPage = window.location.pathname === '/ops'
   const [introStage, setIntroStage] = useState('intro')
   const [pendingStartMode, setPendingStartMode] = useState('full')
   const bartenderReadyAt = useRef(0)
@@ -40,6 +43,24 @@ export default function App() {
   const curIdx = STEPS.indexOf(state.step)
   const showFlow = state.step !== 'bartender'
   const selectedCustomBartender = state.customBartenders?.find((b) => b.id === state.lockedBartenderId)
+
+  useEffect(() => {
+    const handler = (event) => {
+      const target = event.target?.closest?.('button,a,[role="button"]')
+      if (!target) return
+      const label = target.getAttribute('aria-label') || target.textContent || target.className || 'tap'
+      recordEvent({
+        type: 'click',
+        label: String(label).replace(/\s+/g, ' ').trim().slice(0, 80),
+        page: isOpsPage ? 'ops' : state.step || introStage,
+        userId: state.authUser?.id || state.userProfile?.id || '',
+      }).catch(() => {})
+    }
+    window.addEventListener('click', handler, { capture: true })
+    return () => window.removeEventListener('click', handler, { capture: true })
+  }, [introStage, isOpsPage, state.authUser?.id, state.step, state.userProfile?.id])
+
+  if (isOpsPage) return <OpsPage />
 
   const openGuestProfile = () => {
     dispatch({ type: 'SET_WORKFLOW_MODE', mode: 'full' })

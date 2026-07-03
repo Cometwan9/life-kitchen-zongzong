@@ -80,6 +80,20 @@ export async function fetchCellarStats() {
   return data.stats
 }
 
+export async function fetchOpsDashboard() {
+  const data = await request('/api/ops')
+  return data.ops
+}
+
+export async function recordEvent(event) {
+  if (!event) return null
+  const data = await request('/api/events', {
+    method: 'POST',
+    body: JSON.stringify(event),
+  })
+  return data.event
+}
+
 export async function sendLoginCode({ phone, inviteCode }) {
   return request('/api/auth/send-code', {
     method: 'POST',

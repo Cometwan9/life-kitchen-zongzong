@@ -33,13 +33,17 @@ export default function LoginPage({ onAuthenticated }) {
       setDevCode(data.devCode || '')
       if (data.devCode) {
         setCode(data.devCode)
-        setMessage('测试码已放入请柬。')
+        setMessage(`测试验证码：${data.devCode}，已自动填入。`)
       } else {
         setMessage('验证码已送到。')
       }
     } catch (error) {
       const detail = error?.data?.detail
-      setMessage(detail ? `验证码没有送到：${detail}` : (error?.message || '验证码没有送到。'))
+      if (error?.message === 'Failed to fetch') {
+        setMessage('现在不是网页入口。请打开 http://127.0.0.1:5173/ 或线上站点再取号。')
+      } else {
+        setMessage(detail ? `验证码没有送到：${detail}` : (error?.message || '验证码没有送到。'))
+      }
     } finally {
       setLoading(false)
     }
@@ -91,7 +95,7 @@ export default function LoginPage({ onAuthenticated }) {
           <input
             value={inviteCode}
             onChange={(event) => setInviteCode(event.target.value.toUpperCase().slice(0, 24))}
-            placeholder="邀请码"
+            placeholder="ZHONGZHONG"
           />
         </label>
 
@@ -111,6 +115,7 @@ export default function LoginPage({ onAuthenticated }) {
         </label>
 
         {message && <div className={`login-message ${devCode ? 'dev' : ''}`}>{message}</div>}
+        <div className="login-hint">内测邀请码：ZHONGZHONG。未接短信服务时，会显示 6 位测试码。</div>
 
         <button className="login-submit" type="button" onClick={login} disabled={!canLogin || loading}>
           {loading ? '核验中' : '入座'}

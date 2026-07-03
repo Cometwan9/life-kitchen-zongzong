@@ -1386,6 +1386,13 @@ label.field { display: block; font-size: 16px; color: var(--muted); margin: 8px 
   font-weight: 900;
 }
 
+.login-hint {
+  margin-top: 10px;
+  color: rgba(35,68,92,.68);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .assistant-mode-tabs {
   width: min(100%, 900px);
   box-sizing: border-box;
@@ -8953,6 +8960,221 @@ label.field { display: block; font-size: 16px; color: var(--muted); margin: 8px 
   }
   .stage-switcher {
     display: none;
+  }
+}
+
+/* —— 运营看板：独立页面，不进入主流程 —— */
+.ops-page {
+  min-height: 100vh;
+  padding: 28px 18px 64px;
+  color: var(--ink);
+  background:
+    radial-gradient(600px 260px at 50% 0%, rgba(255,255,255,.72), transparent 74%),
+    url('../../assets/textures/pale-damask-wallpaper.svg'),
+    linear-gradient(180deg, #F7FCFA 0%, #E9F7F7 100%);
+  background-size: auto, 380px 520px, auto;
+}
+
+.ops-hero,
+.ops-panel,
+.ops-metric {
+  width: min(1040px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid rgba(78,132,141,.22);
+  background: rgba(255,255,255,.72);
+}
+
+.ops-hero {
+  position: relative;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.ops-back {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  color: var(--wood-dark);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.ops-hero p,
+.ops-hero span {
+  margin: 0;
+  color: rgba(35,68,92,.62);
+  font-size: 13px;
+}
+
+.ops-hero h1 {
+  margin: 8px 0;
+  font-size: clamp(34px, 6vw, 64px);
+  letter-spacing: .08em;
+  color: #275F72;
+}
+
+.ops-grid {
+  width: min(1040px, 100%);
+  margin: 18px auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ops-metric {
+  min-height: 108px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+}
+
+.ops-metric strong {
+  font-size: clamp(28px, 4vw, 44px);
+  color: #245B72;
+}
+
+.ops-metric span {
+  color: rgba(35,68,92,.64);
+  font-size: 14px;
+}
+
+.ops-metric.mint strong { color: #2F8C92; }
+.ops-metric.gold strong { color: #B9862B; }
+.ops-metric.rose strong { color: #C86481; }
+
+.ops-panel {
+  padding: 18px;
+  margin-top: 16px;
+}
+
+.ops-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.ops-panel-head h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #245B72;
+}
+
+.ops-panel-head span {
+  font-size: 13px;
+  color: rgba(35,68,92,.62);
+}
+
+.ops-columns {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ops-columns .ops-panel {
+  width: 100%;
+}
+
+.ops-bars {
+  min-height: 160px;
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 2px 0;
+}
+
+.ops-bar {
+  min-width: 34px;
+  height: 140px;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  gap: 7px;
+}
+
+.ops-bar i {
+  width: 18px;
+  min-height: 18px;
+  display: block;
+  background: #8FE4DF;
+  border: 1px solid rgba(36,68,92,.22);
+}
+
+.ops-bar span {
+  font-size: 11px;
+  color: rgba(35,68,92,.64);
+}
+
+.ops-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ops-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(78,132,141,.22);
+}
+
+.ops-row strong {
+  color: #24445C;
+  font-size: 15px;
+}
+
+.ops-row span {
+  color: rgba(35,68,92,.64);
+  font-size: 13px;
+  text-align: right;
+}
+
+.ops-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ops-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: rgba(234,249,247,.85);
+  border: 1px solid rgba(78,132,141,.2);
+  color: #245B72;
+}
+
+.ops-chips b {
+  color: #B9862B;
+}
+
+.ops-empty,
+.ops-loading,
+.ops-error {
+  width: min(1040px, 100%);
+  margin: 18px auto;
+  color: rgba(35,68,92,.68);
+  font-size: 14px;
+}
+
+.ops-error {
+  color: #B34A58;
+}
+
+@media (max-width: 760px) {
+  .ops-grid,
+  .ops-columns {
+    grid-template-columns: 1fr;
+  }
+  .ops-hero {
+    padding-top: 44px;
   }
 }
 
