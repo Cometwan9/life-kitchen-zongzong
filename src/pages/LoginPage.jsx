@@ -20,7 +20,11 @@ export default function LoginPage({ onAuthenticated }) {
   const canLogin = canSend && code.trim().length >= 4
 
   async function requestCode() {
-    if (!canSend || loading) return
+    if (loading) return
+    if (!canSend) {
+      setMessage('先填手机号和邀请码 ZHONGZHONG，再取验证码。')
+      return
+    }
     setLoading(true)
     setMessage('')
     setDevCode('')
@@ -38,11 +42,12 @@ export default function LoginPage({ onAuthenticated }) {
         setMessage('验证码已送到。')
       }
     } catch (error) {
-      const detail = error?.data?.detail
+      const detail = error?.data?.detail || error?.data?.message || error?.data?.error
       if (error?.message === 'Failed to fetch') {
         setMessage('现在不是网页入口。请打开 http://127.0.0.1:5173/ 或线上站点再取号。')
       } else {
-        setMessage(detail ? `验证码没有送到：${detail}` : (error?.message || '验证码没有送到。'))
+        const status = error?.status ? `(${error.status})` : ''
+        setMessage(detail ? `验证码没有送到${status}：${detail}` : (error?.message || '验证码没有送到。'))
       }
     } finally {
       setLoading(false)
@@ -50,7 +55,11 @@ export default function LoginPage({ onAuthenticated }) {
   }
 
   async function login() {
-    if (!canLogin || loading) return
+    if (loading) return
+    if (!canLogin) {
+      setMessage('请输入手机号、邀请码和 6 位验证码。')
+      return
+    }
     setLoading(true)
     setMessage('')
     try {
@@ -61,8 +70,9 @@ export default function LoginPage({ onAuthenticated }) {
       })
       dispatch({ type: 'SET_AUTH', token: data.token, user: data.user })
       onAuthenticated?.()
-    } catch {
-      setMessage('验证码不对，或者已经过期了。')
+    } catch (error) {
+      const detail = error?.data?.message || error?.data?.error || error?.message
+      setMessage(detail ? `入座失败：${detail}` : '验证码不对，或者已经过期了。')
     } finally {
       setLoading(false)
     }
@@ -108,16 +118,16 @@ export default function LoginPage({ onAuthenticated }) {
               onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder={sent ? '验证码' : '取验证码'}
             />
-            <button type="button" onClick={requestCode} disabled={!canSend || loading}>
-              {sent ? '再取' : '取'}
+            <button type="button" onClick={requestCode} disabled={loading}>
+              {sent ? '再取' : '取号'}
             </button>
           </div>
         </label>
 
         {message && <div className={`login-message ${devCode ? 'dev' : ''}`}>{message}</div>}
-        <div className="login-hint">内测邀请码：ZHONGZHONG。未接短信服务时，会显示 6 位测试码。</div>
+        <div className="login-hint">内测邀请码：ZHONGZHONG。未接短信服务时，测试验证码固定为 123456。</div>
 
-        <button className="login-submit" type="button" onClick={login} disabled={!canLogin || loading}>
+        <button className="login-submit" type="button" onClick={login} disabled={loading}>
           {loading ? '核验中' : '入座'}
         </button>
       </section>

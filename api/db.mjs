@@ -7,6 +7,7 @@ import { createHash, createHmac, randomInt, randomUUID } from 'node:crypto'
 const DB_DIR = process.env.LIFE_KITCHEN_DB_DIR || (process.env.VERCEL ? '/tmp/life-kitchen-data' : path.resolve(process.cwd(), '.data'))
 const DB_FILE = path.join(DB_DIR, 'life-kitchen-db.json')
 let petProcess = null
+const DEV_LOGIN_CODE = '123456'
 
 function loadLocalEnv() {
   for (const file of ['.env', '.env.local']) {
@@ -72,15 +73,17 @@ function hashCode(code = '') {
 
 function hasSmsProvider() {
   return Boolean(
-    (process.env.TENCENT_SECRET_ID && process.env.TENCENT_SECRET_KEY && process.env.TENCENT_SMS_SDK_APP_ID) ||
+    (process.env.TENCENT_SECRET_ID &&
+      process.env.TENCENT_SECRET_KEY &&
+      process.env.TENCENT_SMS_SDK_APP_ID &&
+      process.env.TENCENT_SMS_SIGN_NAME &&
+      process.env.TENCENT_SMS_TEMPLATE_ID) ||
     (process.env.SMS_API_URL && process.env.SMS_API_KEY),
   )
 }
 
-function devLoginCode(phone = '') {
-  const date = new Date().toISOString().slice(0, 10)
-  const seed = createHash('sha256').update(`${phone}:${date}:life-kitchen-dev-pass`).digest('hex')
-  return String((parseInt(seed.slice(0, 8), 16) % 900000) + 100000)
+function devLoginCode() {
+  return DEV_LOGIN_CODE
 }
 
 function hmac(key, value, encoding) {
