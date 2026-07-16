@@ -10,6 +10,17 @@ import { generateDrinkPixelCard } from '../engine/imageGen.js'
 const COOL_CATEGORIES = new Set(['communication', 'review', 'recovery'])
 const WARM_CATEGORIES = new Set(['deep_work', 'creative', 'urgent', 'admin'])
 const DESSERT_VESSELS = new Set(['cake', 'tart', 'snack'])
+const CELEBRATION_PIECES = [
+  { x: '16%', y: '42%', dx: '-48px', dy: '-118px', color: '#FFE76A', delay: '0ms', rotate: '-18deg' },
+  { x: '24%', y: '58%', dx: '-28px', dy: '-138px', color: '#8FE4DF', delay: '60ms', rotate: '24deg' },
+  { x: '36%', y: '34%', dx: '-12px', dy: '-124px', color: '#FFC7DB', delay: '120ms', rotate: '52deg' },
+  { x: '48%', y: '48%', dx: '2px', dy: '-148px', color: '#FFF3C4', delay: '30ms', rotate: '-42deg' },
+  { x: '58%', y: '36%', dx: '18px', dy: '-132px', color: '#BDEFD0', delay: '150ms', rotate: '18deg' },
+  { x: '70%', y: '54%', dx: '42px', dy: '-126px', color: '#FFE29A', delay: '80ms', rotate: '-28deg' },
+  { x: '82%', y: '44%', dx: '54px', dy: '-112px', color: '#F8AFC8', delay: '170ms', rotate: '38deg' },
+  { x: '31%', y: '70%', dx: '-34px', dy: '-92px', color: '#A8DDE6', delay: '220ms', rotate: '8deg' },
+  { x: '64%', y: '70%', dx: '34px', dy: '-96px', color: '#FFD84A', delay: '260ms', rotate: '-12deg' },
+]
 
 function honorific(profile = {}) {
   if (profile.gender === 'male') return '先生'
@@ -399,17 +410,37 @@ export default function SpecialCard({ card, bartender, reportOpen = false, onGen
         <div className="result-signature letter-signature" aria-label="出品署名">
           <span className="letter-to">To: {guestLine(profile)}</span>
           <i />
-          <span className="letter-from">From: {card.bartender}</span>
         </div>
       </div>
 
-      {pixelCardUrl ? (
-        <div className="generated-pixel-card">
-          <img src={pixelCardUrl} alt={`${card.drinkName} 像素出杯图`} />
-        </div>
-      ) : (
-        <ResultDrink recipe={card.recipe || []} isEmptyCup={isEmptyCup} vessel={card.vessel || 'highball'} bartender={bartender} />
-      )}
+      <div className="result-showcase" aria-label="出杯展示">
+        {!isEmptyCup && !reportOpen && (
+          <div className="result-confetti" aria-hidden="true">
+            {CELEBRATION_PIECES.map((piece, index) => (
+              <i
+                key={`${piece.x}-${index}`}
+                style={{
+                  '--x': piece.x,
+                  '--y': piece.y,
+                  '--dx': piece.dx,
+                  '--dy': piece.dy,
+                  '--confetti-color': piece.color,
+                  '--confetti-delay': piece.delay,
+                  '--confetti-rotate': piece.rotate,
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {pixelCardUrl ? (
+          <div className="generated-pixel-card">
+            <img src={pixelCardUrl} alt={`${card.drinkName} 像素出杯图`} />
+          </div>
+        ) : (
+          <ResultDrink recipe={card.recipe || []} isEmptyCup={isEmptyCup} vessel={card.vessel || 'highball'} bartender={bartender} />
+        )}
+        <span className="result-stage-signature">From: {card.bartender}</span>
+      </div>
 
       <div className="dname">{productType}完成</div>
       <div className="bartender-badge-line">

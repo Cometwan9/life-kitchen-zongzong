@@ -48,12 +48,18 @@ const UI_TEXT = {
     settingsAria: '打开设置',
     cellarAria: '打开冰柜',
     back: '返回',
-    guideTitle: '今晚怎么喝',
-    guideCopy: '把今天放到吧台上，种种会整理成一张能开做的配方。',
+    guideTitle: '吧台小引',
+    guideCopy: '把今天发生的事放到吧台上。种种会先收成一张小酒单，再陪你按节奏完成。',
     guideTalk: '说今天',
     guideRecipe: '排配方',
-    guideFocus: '开做',
-    guideFinish: '出杯',
+    guideFocus: '开始计时',
+    guideFinish: '调配完成',
+    guideFaqTitle: '吧台答疑',
+    guideFaq: [
+      ['加冰 / 去冰', '想休息多一点，就加冰；今天想一路推进，就少冰。种种只会在合适的时候轻轻提醒你。'],
+      ['糖度', '糖度是给自己的小奖励。甜一点，代表今天可以留一点玩乐、放空或开心时间。'],
+      ['怎么开始', '先把今天说给吧台听，确认配方后开计时。做完就打勾，顺序可以按真实节奏走。'],
+    ],
     settingsTitle: '吧台偏好',
     whiteNoise: '白噪音',
     whiteNoiseHint: '吧台低声',
@@ -82,12 +88,18 @@ const UI_TEXT = {
     settingsAria: '打開設定',
     cellarAria: '打開冰櫃',
     back: '返回',
-    guideTitle: '今晚怎麼喝',
-    guideCopy: '把今天放到吧台上，種種會整理成一張能開做的配方。',
+    guideTitle: '吧台小引',
+    guideCopy: '把今天發生的事放到吧台上。種種會先收成一張小酒單，再陪你按節奏完成。',
     guideTalk: '說今天',
     guideRecipe: '排配方',
-    guideFocus: '開做',
-    guideFinish: '出杯',
+    guideFocus: '開始計時',
+    guideFinish: '調配完成',
+    guideFaqTitle: '吧台答疑',
+    guideFaq: [
+      ['加冰 / 去冰', '冰不是任務。它代表休息提醒：加冰多一點，種種會多提醒你離開螢幕、喝水或走一圈。'],
+      ['糖度', '糖度是娛樂和獎勵時間。甜一點，代表今天可以留一點輕鬆小獎勵。'],
+      ['怎麼開始', '先說今天，確認配方後再開始計時。完成事項時打勾，不用反覆重排。'],
+    ],
     settingsTitle: '吧台偏好',
     whiteNoise: '白噪音',
     whiteNoiseHint: '吧台低聲',
@@ -116,12 +128,18 @@ const UI_TEXT = {
     settingsAria: 'Open preferences',
     cellarAria: 'Open cellar',
     back: 'Back',
-    guideTitle: 'How Tonight Works',
-    guideCopy: 'Put today on the counter. Zhongzhong turns it into a recipe you can start.',
-    guideTalk: 'Tell',
-    guideRecipe: 'Recipe',
-    guideFocus: 'Focus',
-    guideFinish: 'Serve',
+    guideTitle: 'At the Counter',
+    guideCopy: 'Put today on the counter. Zhongzhong turns it into a small menu, then helps you follow the rhythm.',
+    guideTalk: 'Tell Today',
+    guideRecipe: 'Arrange',
+    guideFocus: 'Start Timer',
+    guideFinish: 'Finish Mix',
+    guideFaqTitle: 'Counter Notes',
+    guideFaq: [
+      ['Ice', 'Ice means break reminders, not tasks. More ice means more nudges to drink water, look away, or take a small walk.'],
+      ['Sweetness', 'Sweetness means reward time. A sweeter recipe leaves a little room for play.'],
+      ['How to start', 'Tell today first, confirm the recipe, then start the timer. Check items off when they are done.'],
+    ],
     settingsTitle: 'Bar Preferences',
     whiteNoise: 'White Noise',
     whiteNoiseHint: 'Low bar murmur',
@@ -150,12 +168,18 @@ const UI_TEXT = {
     settingsAria: '設定を開く',
     cellarAria: '冷蔵棚を開く',
     back: '戻る',
-    guideTitle: '今夜の一杯',
-    guideCopy: '今日のことをカウンターへ。種種が始めやすいレシピに整えます。',
-    guideTalk: '話す',
-    guideRecipe: '配合',
-    guideFocus: '集中',
-    guideFinish: '完成',
+    guideTitle: 'カウンター案内',
+    guideCopy: '今日のことをカウンターに置いてください。種種が小さなメニューにして、順番に進めます。',
+    guideTalk: '今日を話す',
+    guideRecipe: '並べる',
+    guideFocus: '計時開始',
+    guideFinish: '仕上げ',
+    guideFaqTitle: 'カウンターメモ',
+    guideFaq: [
+      ['氷', '氷はタスクではなく休憩の合図です。多めにすると、水を飲む・目を休める通知が増えます。'],
+      ['甘さ', '甘さはごほうび時間です。少し甘くすると、軽い遊び時間を残します。'],
+      ['始め方', 'まず今日を話し、配方を確認してから計時します。終わったものだけチェックしてください。'],
+    ],
     settingsTitle: 'バーの好み',
     whiteNoise: '環境音',
     whiteNoiseHint: '低い店内音',
@@ -184,12 +208,18 @@ const UI_TEXT = {
     settingsAria: '설정 열기',
     cellarAria: '냉장고 열기',
     back: '뒤로',
-    guideTitle: '오늘의 한 잔',
-    guideCopy: '오늘을 바 위에 올려두면 종종이 바로 시작할 레시피로 정리해요.',
-    guideTalk: '말하기',
-    guideRecipe: '배합',
-    guideFocus: '집중',
-    guideFinish: '완성',
+    guideTitle: '바 안내',
+    guideCopy: '오늘 있었던 일을 바 위에 올려두세요. 종종이 작은 메뉴로 정리하고 차례대로 같이 진행해요.',
+    guideTalk: '오늘 말하기',
+    guideRecipe: '정리하기',
+    guideFocus: '타이머 시작',
+    guideFinish: '완성하기',
+    guideFaqTitle: '바 메모',
+    guideFaq: [
+      ['얼음', '얼음은 할 일이 아니라 휴식 알림이에요. 많을수록 물 마시기, 멀리 보기, 걷기 알림이 늘어요.'],
+      ['당도', '당도는 보상 시간이에요. 더 달게 하면 오늘의 작은 즐거움을 남겨둬요.'],
+      ['시작하기', '오늘을 먼저 말하고, 배합을 확인한 뒤 타이머를 시작해요. 끝난 항목만 체크하면 됩니다.'],
+    ],
     settingsTitle: '바 취향',
     whiteNoise: '백색소음',
     whiteNoiseHint: '낮은 바 소리',
@@ -222,6 +252,7 @@ export default function App() {
   const [pendingStartMode, setPendingStartMode] = useState('full')
   const [profileOpen, setProfileOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [guideDetailsOpen, setGuideDetailsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [whiteNoiseOn, setWhiteNoiseOn] = useState(Boolean(savedUiSettings.whiteNoiseOn))
   const [language, setLanguage] = useState(savedUiSettings.language || 'zh-CN')
@@ -518,14 +549,11 @@ export default function App() {
     <div className={`app step-${state.step}`}>
       {showShell && (
         <div className="topbar tavern-topbar">
-          <div className="brand">
-            Life Kitchen
-          </div>
           <div className="tavern-top-actions">
             <button className="top-icon-btn cellar-icon-btn" type="button" onClick={openCellar} aria-label={text.cellarAria}>
               <span className="cellar-top-icon" aria-hidden="true" />
             </button>
-            <button className="top-icon-btn" type="button" onClick={() => { setSettingsOpen(false); setGuideOpen((open) => !open) }} aria-label={text.guideAria}>
+            <button className="top-icon-btn" type="button" onClick={() => { setSettingsOpen(false); setGuideOpen((open) => !open); setGuideDetailsOpen(false) }} aria-label={text.guideAria}>
               <span className="guide-icon" aria-hidden="true" />
             </button>
             <button className="top-icon-btn settings-icon-btn" type="button" onClick={() => { setGuideOpen(false); setSettingsOpen((open) => !open) }} aria-label={text.settingsAria}>
@@ -548,13 +576,32 @@ export default function App() {
             <span className="guide-ticket"><i /></span>
             <span className="guide-cup"><i /></span>
           </div>
-          <p>{text.guideCopy}</p>
-          <div className="guide-card-grid" aria-label={text.guideTitle}>
-            <span className="guide-card talk"><i /><b>{text.guideTalk}</b></span>
-            <span className="guide-card recipe"><i /><b>{text.guideRecipe}</b></span>
-            <span className="guide-card focus"><i /><b>{text.guideFocus}</b></span>
-            <span className="guide-card finish"><i /><b>{text.guideFinish}</b></span>
-          </div>
+          <button className={`guide-summary-strip ${guideDetailsOpen ? 'open' : ''}`} type="button" onClick={() => setGuideDetailsOpen((open) => !open)} aria-expanded={guideDetailsOpen}>
+            <span>{text.guideCopy}</span>
+            <b>{guideDetailsOpen ? '收起' : '展开'}</b>
+          </button>
+          {guideDetailsOpen && (
+            <>
+              <div className="guide-card-grid" aria-label={text.guideTitle}>
+                <span className="guide-card talk"><i /><b>{text.guideTalk}</b></span>
+                <span className="guide-card recipe"><i /><b>{text.guideRecipe}</b></span>
+                <span className="guide-card focus"><i /><b>{text.guideFocus}</b></span>
+                <span className="guide-card finish"><i /><b>{text.guideFinish}</b></span>
+              </div>
+              <section className="guide-faq-panel" aria-label={text.guideFaqTitle}>
+                <strong>{text.guideFaqTitle}</strong>
+                <div>
+                  {(text.guideFaq || []).map(([title, body], index) => (
+                    <article key={title} className={`faq-note faq-note-${index + 1}`}>
+                      <i aria-hidden="true" />
+                      <b>{title}</b>
+                      <p>{body}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
         </div>
       )}
 

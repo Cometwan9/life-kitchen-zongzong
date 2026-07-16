@@ -16,7 +16,7 @@ import { notifyTaskDone } from '../engine/uiSettings.js'
 const OPTIMIZATION_PROPS = [
   {
     icon: 'sweet',
-    name: '甜度',
+    name: '甜一点',
     note: '把最硬的一项拆小一点，入口更顺。',
   },
   {
@@ -62,6 +62,7 @@ const ACTION = {
 }
 
 const mmss = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+const MAX_ESTIMATE_MINUTES = 720
 
 const RHYTHMS = {
   academy: { label: '高校 45/10', focus: 45, rest: 10, note: '适合课程、论文、长题训练' },
@@ -100,6 +101,66 @@ function clock(min) {
 function briefTitle(title = '') {
   const clean = String(title).trim()
   return clean.length > 16 ? `${clean.slice(0, 16)}...` : clean
+}
+
+function RecipeTimeAdjuster({ value, label, onChange }) {
+  const minutes = Math.max(1, Math.min(MAX_ESTIMATE_MINUTES, Math.round(Number(value || 1))))
+  const [draft, setDraft] = useState(String(minutes))
+
+  useEffect(() => {
+    setDraft(String(minutes))
+  }, [minutes])
+
+  const commit = (nextValue = draft) => {
+    const next = Number(nextValue)
+    if (!Number.isFinite(next)) {
+      setDraft(String(minutes))
+      return
+    }
+    const safe = Math.max(1, Math.min(MAX_ESTIMATE_MINUTES, Math.round(next)))
+    setDraft(String(safe))
+    onChange(safe)
+  }
+
+  const nudge = (delta) => commit(minutes + delta)
+
+  return (
+    <div className="recipe-time-adjuster" role="group" aria-label={label}>
+      <button type="button" className="recipe-time-step" aria-label="减少一分钟" onClick={() => nudge(-1)}>
+        <span />
+      </button>
+      <label>
+        <input
+          type="number"
+          inputMode="numeric"
+          min="1"
+          max={MAX_ESTIMATE_MINUTES}
+          step="1"
+          value={draft}
+          onChange={(event) => {
+            setDraft(event.target.value)
+            if (event.target.value !== '') commit(event.target.value)
+          }}
+          onBlur={() => commit()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+            if (event.key === 'ArrowUp') {
+              event.preventDefault()
+              nudge(1)
+            }
+            if (event.key === 'ArrowDown') {
+              event.preventDefault()
+              nudge(-1)
+            }
+          }}
+        />
+        <span>min</span>
+      </label>
+      <button type="button" className="recipe-time-step plus" aria-label="增加一分钟" onClick={() => nudge(1)}>
+        <span />
+      </button>
+    </div>
+  )
 }
 
 function currentMinuteOfDay() {
@@ -219,6 +280,7 @@ export default function OptimizePage() {
   const hasOrder = state.order.length > 0
   const completedCount = state.order.filter((t) => statusOf(t) === 'completed').length
   const hasCompleted = completedCount > 0
+  const allCompleted = hasOrder && completedCount === state.order.length
   const canEditRecipe = !isQuickMode && stageMode === 'recipe'
   const nextTask = state.order.find((t) => !statusOf(t))
   const currentTask = active || nextTask
@@ -262,6 +324,7 @@ export default function OptimizePage() {
         key: 'ice',
         title: '去冰 / 冰块',
         label: '放松时间',
+        hint: breakMinutes > 0 ? `安排 ${formatDuration(breakMinutes)} 透气提醒` : '给自己留一口透气时间',
         minutes: relaxMinutes,
         percent: Math.max(8, Math.round((relaxMinutes / total) * 100)),
         tone: '#A9E7DE',
@@ -270,6 +333,7 @@ export default function OptimizePage() {
         key: 'sugar',
         title: '糖度',
         label: '玩乐时间',
+        hint: playMinutes > 0 ? `保留 ${formatDuration(playMinutes)} 小奖励` : '完成后留一点轻松奖励',
         minutes: playMinutes,
         percent: Math.max(8, Math.round((playMinutes / total) * 100)),
         tone: '#FFD98A',
@@ -344,7 +408,7 @@ export default function OptimizePage() {
       if (action.type !== 'finalize') return
       requestFinalize()
     })
-  }, [hasCompleted, activeId, state.order, state.records]) // eslint-disable-line
+  }, [allCompleted, activeId, state.order, state.records]) // eslint-disable-line
 
   useEffect(() => {
     return onPetAction((action) => {
@@ -516,7 +580,7 @@ export default function OptimizePage() {
   }
 
   function requestFinalize() {
-    if (!hasCompleted) return
+    if (!allCompleted) return
     setConfirmGenerate(true)
   }
 
@@ -544,9 +608,14 @@ export default function OptimizePage() {
     dispatch({ type: 'SET_ORDER', order: newOrder })
   }
 
+  const setOrderTime = (todo, minutes) => {
+    const next = Math.max(1, Math.min(MAX_ESTIMATE_MINUTES, Math.round(Number(minutes || 1))))
+    dispatch({ type: 'UPDATE_TODO', id: todo.id, patch: { estimatedTime: next } })
+  }
+
   const startSwipeSort = (event, id) => {
     if (activeId) return
-    if (event.target.closest?.('button, input, textarea, select, a')) return
+    if (event.target.closest?.('button, input, textarea, select, a, .recipe-time-adjuster')) return
     const fromHandle = Boolean(event.target.closest?.('.swipe-grip'))
     if (event.button != null && event.button !== 0) return
     event.currentTarget.setPointerCapture?.(event.pointerId)
@@ -595,26 +664,10 @@ export default function OptimizePage() {
   }
 
   return (
-    <div>
-      <h2 className="title">{isQuickMode ? '开始' : `${bartender.name} 的特调单`}</h2>
-      <p className="subtitle compact-subtitle">
-        {isQuickMode ? '一次只看一项。' : '排好顺序，就可以开做。'}
-      </p>
+    <div className="optimize-page">
+      <h2 className="title optimize-title">{`${bartender.name || '种种'}的今日特调`}</h2>
 
       <div className={`card order-card ${active ? 'pomodoro-mode' : ''}`}>
-        <div className="execute-toolbar order-toolbar">
-          <div>
-            <label className="field">{isQuickMode ? '▸ 执行清单' : '▸ 调配清单'}</label>
-            <span className="toolbar-status">
-              {completedCount}/{state.order.length} 完成
-            </span>
-          </div>
-          <button className="btn-ghost compact-action result-jump-action" disabled={!hasCompleted || activeId} onClick={requestFinalize}>
-            <span>{hasCompleted ? '出杯看结果 →' : '完成后出杯'}</span>
-            <small>{hasCompleted ? '查看最终出品' : '先完成或打勾一项'}</small>
-          </button>
-        </div>
-
         <div className={`order-dashboard ${isQuickMode ? 'quick-dashboard' : ''} ${stageMode === 'execute' ? 'is-execute-stage' : 'is-recipe-stage'} ${active ? 'is-focus-brew' : ''}`}>
           <div className="order-blueprint" aria-label="酒单比例图">
             <div className="panel-title">
@@ -640,56 +693,89 @@ export default function OptimizePage() {
               </div>
             </div>
             <div className="blueprint-table" aria-hidden="true" />
-            {false && canEditRecipe && <div className={`drink-orbit slice-${sliceView}`} aria-label="调配酒单显示模式">
-              <div className="slice-view-switch" role="group" aria-label="调配酒单显示模式">
-                <span>调配方式</span>
-                <button type="button" className={sliceView === 'simple' ? 'on' : ''} onClick={() => setSliceView('simple')}>轻饮</button>
-                <button type="button" className={sliceView === 'full' ? 'on' : ''} onClick={() => setSliceView('full')}>细调</button>
+            {active ? (
+              <div className="order-brew-stage">
+                {bartender.image && (
+                  <div className="focus-companion" aria-hidden="true">
+                    <img src={bartender.image} alt="" />
+                  </div>
+                )}
+                <div className="now brew-kicker">制作中</div>
+                <div className="task">{active.title}</div>
+                <div className="brew-say">{ACTION[active.taskType] || '调制中'}</div>
+                <div className="brew-clock-block" aria-label="专注倒计时">
+                  <span>专注计时</span>
+                  <div className={`brew-timer ${isOverPlan ? 'over-plan' : ''}`}>{mmss(elapsed)}</div>
+                </div>
+                <div className="now">{isOverPlan ? '火候已过，等会儿记进你的口味偏好' : `建议 ${activeBestWindow} 分钟内饮用风味最佳`}</div>
+                <div className="brew-actions">
+                  <button className="btn-primary" onClick={() => finish()}>做完了 ✓</button>
+                  <button className="btn-ghost" onClick={skip}>跳过</button>
+                </div>
               </div>
+            ) : (
+              <div className="blueprint-note">
+                {isQuickMode ? '点「开始这一项」。' : stageMode === 'recipe' ? '下方拖动小票排序。' : '开始后会进入专注计时。'}
+              </div>
+            )}
+          </div>
+
+          {canEditRecipe && (
+            <div className="recipe-version-tabs recipe-version-tabs-bottom" role="group" aria-label="选择调配版本">
+              <button type="button" className={sliceView === 'simple' ? 'on' : ''} onClick={() => setSliceView('simple')}>
+                纯享版
+              </button>
+              <button type="button" className={sliceView === 'full' ? 'on' : ''} onClick={() => setSliceView('full')}>
+                定制版
+              </button>
+            </div>
+          )}
+
+          {canEditRecipe && (
+            <div className={`drink-orbit recipe-version-panel slice-${sliceView}`} aria-label={isSimpleRecipeView ? '纯享版配方摘要' : '定制版配方选项'}>
               {isSimpleRecipeView ? (
-                <div className="simple-slice-card" aria-label="简约空闲安排">
+                <div className="simple-slice-card" aria-label="纯享版时间摘要">
                   <div className="simple-slice-head">
                     <strong>{formatDuration(totalMinutes)}</strong>
                     <span>{freeSliceItems.length} 项</span>
                   </div>
-                  <div className="simple-slice-track">
-                    {freeSliceItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className={`simple-slice-item ${item.type === 'break' ? 'rest' : ''}`}
-                        style={{
-                          '--slice-flex': item.minutes,
-                          '--ingredient-color': VISUAL_INGREDIENTS[item.taskType]?.color || '#8FE4DF',
-                        }}
-                      >
-                        <span>{index + 1}</span>
-                        <strong>{item.title}</strong>
-                        <em>{formatDuration(item.minutes)}</em>
-                      </div>
-                    ))}
+                  <div className="simple-slice-summary">
+                    <span className="summary-ticket-icon" aria-hidden="true"><i /></span>
+                    <div>
+                      <strong>先按这张小票开做</strong>
+                      <em>顺序和时间都在下方，想改口味再切到定制版。</em>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <>
                   {isFreeTimeMode && (
-                    <div className="flavor-cup-row" aria-label="空闲时间配比">
-                      {flavorCups.map((cup) => (
-                        <button
-                          type="button"
-                          key={cup.key}
-                          className={`flavor-cup ${cup.key} ${selectedSliceTool === cup.key ? 'selected' : ''}`}
-                          style={{ '--cup-fill': `${cup.percent}%`, '--cup-tone': cup.tone }}
-                          onClick={() => setSelectedSliceTool(cup.key)}
-                          aria-pressed={selectedSliceTool === cup.key}
-                        >
-                          <span className="flavor-vial" aria-hidden="true"><i /></span>
-                          <span>
-                            <strong>{cup.title}</strong>
-                            <em>{cup.label}</em>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div className="flavor-cup-row" aria-label="空闲时间配比">
+                        {flavorCups.map((cup) => (
+                          <button
+                            type="button"
+                            key={cup.key}
+                            className={`flavor-cup ${cup.key} ${selectedSliceTool === cup.key ? 'selected' : ''}`}
+                            style={{ '--cup-fill': `${cup.percent}%`, '--cup-tone': cup.tone }}
+                            onClick={() => setSelectedSliceTool(cup.key)}
+                            aria-pressed={selectedSliceTool === cup.key}
+                          >
+                            <span className="flavor-vial" aria-hidden="true"><i /></span>
+                            <span>
+                              <strong>{cup.title}</strong>
+                              <em>{cup.label}</em>
+                              <small>{selectedSliceTool === cup.key ? cup.hint : `${formatDuration(cup.minutes)} · 点击调整`}</small>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="selected-flavor-note" aria-live="polite">
+                        <span aria-hidden="true">{selectedSliceTool === 'ice' ? '◌' : '✦'}</span>
+                        <b>{selectedFlavorCup.title}</b>
+                        <em>{selectedFlavorCup.hint}</em>
+                      </div>
+                    </>
                   )}
                   <div className="addon-cup-row" aria-label="可选优化小料">
                     {EVOMAP_EXPERIENCES.map((exp, index) => {
@@ -719,118 +805,93 @@ export default function OptimizePage() {
                       )
                     })}
                   </div>
-                </>
-              )}
-            </div>}
-            {false && canEditRecipe && !isSimpleRecipeView && <div className="vessel-picker" role="group" aria-label="选择今日器皿">
-              {VESSELS.map((vessel) => (
-                <button
-                  key={vessel.id}
-                  type="button"
-                  className={(state.drinkVessel || 'highball') === vessel.id ? 'on' : ''}
-                  onClick={() => dispatch({ type: 'SET_VESSEL', vessel: vessel.id })}
-                >
-                  <span className={`vessel-icon vessel-${vessel.id}`} aria-hidden="true">
-                    <span />
-                  </span>
-                  <span>{vessel.label}</span>
-                </button>
-              ))}
-              <button
-                type="button"
-                className="vessel-more"
-                onClick={() => setVesselPanel((panel) => (panel === 'more' ? '' : 'more'))}
-              >
-                <span className="vessel-icon vessel-locked" aria-hidden="true">
-                  <span />
-                </span>
-                <span>解锁更多</span>
-              </button>
-              <button
-                type="button"
-                className={(state.drinkVessel || 'highball') === 'custom' ? 'on vessel-custom' : 'vessel-custom'}
-                onClick={() => setVesselPanel((panel) => (panel === 'custom' ? '' : 'custom'))}
-              >
-                <span className="vessel-icon vessel-custom-shape" aria-hidden="true">
-                  <span />
-                </span>
-                <span>{state.customVesselLabel || '自定义杯'}</span>
-              </button>
-            </div>}
-            {false && canEditRecipe && !isSimpleRecipeView && vesselPanel && (
-              <div className={`vessel-panel vessel-panel-${vesselPanel}`} aria-live="polite">
-                {vesselPanel === 'more' ? (
-                  LOCKED_VESSELS.map((vessel) => (
-                    <button key={vessel.id} type="button" className="locked-vessel" disabled>
-                      <span className={`vessel-icon vessel-${vessel.id}`} aria-hidden="true"><span /></span>
-                      <span>
-                        <strong>{vessel.label}</strong>
-                        <em>{vessel.hint}</em>
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <>
-                    <label className="custom-vessel-field">
-                      <span>给杯子起个名字</span>
-                      <input
-                        value={customVesselName}
-                        maxLength={12}
-                        onChange={(event) => setCustomVesselName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key !== 'Enter') return
-                          const label = customVesselName.trim() || '我的杯子'
-                          dispatch({ type: 'SET_VESSEL', vessel: 'custom', label })
-                          setVesselPanel('')
-                        }}
-                      />
-                    </label>
+                  <div className="vessel-picker" role="group" aria-label="选择今日器皿">
+                    {VESSELS.map((vessel) => (
+                      <button
+                        key={vessel.id}
+                        type="button"
+                        className={(state.drinkVessel || 'highball') === vessel.id ? 'on' : ''}
+                        onClick={() => dispatch({ type: 'SET_VESSEL', vessel: vessel.id })}
+                      >
+                        <span className={`vessel-icon vessel-${vessel.id}`} aria-hidden="true">
+                          <span />
+                        </span>
+                        <span>{vessel.label}</span>
+                      </button>
+                    ))}
                     <button
                       type="button"
-                      className="btn-ghost custom-vessel-save"
-                      onClick={() => {
-                        const label = customVesselName.trim() || '我的杯子'
-                        dispatch({ type: 'SET_VESSEL', vessel: 'custom', label })
-                        setVesselPanel('')
-                      }}
+                      className="vessel-more"
+                      onClick={() => setVesselPanel((panel) => (panel === 'more' ? '' : 'more'))}
                     >
-                      用这只杯子
+                      <span className="vessel-icon vessel-locked" aria-hidden="true">
+                        <span />
+                      </span>
+                      <span>解锁更多</span>
                     </button>
-                  </>
-                )}
-              </div>
-            )}
-            {active ? (
-              <div className="order-brew-stage">
-                {bartender.image && (
-                  <div className="focus-companion" aria-hidden="true">
-                    <img src={bartender.image} alt="" />
+                    <button
+                      type="button"
+                      className={(state.drinkVessel || 'highball') === 'custom' ? 'on vessel-custom' : 'vessel-custom'}
+                      onClick={() => setVesselPanel((panel) => (panel === 'custom' ? '' : 'custom'))}
+                    >
+                      <span className="vessel-icon vessel-custom-shape" aria-hidden="true">
+                        <span />
+                      </span>
+                      <span>{state.customVesselLabel || '自定义杯'}</span>
+                    </button>
                   </div>
-                )}
-                <div className="now brew-kicker">制作中</div>
-                <div className="task">{active.title}</div>
-                <div className="brew-say">{ACTION[active.taskType] || '调制中'}</div>
-                <div className="brew-clock-block" aria-label="专注倒计时">
-                  <span>专注计时</span>
-                  <div className={`brew-timer ${isOverPlan ? 'over-plan' : ''}`}>{mmss(elapsed)}</div>
-                </div>
-                <div className="now">{isOverPlan ? '火候已过，等会儿记进你的口味偏好' : `建议 ${activeBestWindow} 分钟内饮用风味最佳`}</div>
-                <div className="brew-actions">
-                  <button className="btn-primary" onClick={() => finish()}>做完了 ✓</button>
-                  <button className="btn-ghost" onClick={skip}>跳过</button>
-                </div>
-              </div>
-            ) : (
-              <div className="blueprint-note">
-                {isQuickMode ? '点「开始这一项」。' : stageMode === 'recipe' ? '右侧调整顺序。' : '开始后会进入专注计时。'}
-              </div>
-            )}
-          </div>
+                  {vesselPanel && (
+                    <div className={`vessel-panel vessel-panel-${vesselPanel}`} aria-live="polite">
+                      {vesselPanel === 'more' ? (
+                        LOCKED_VESSELS.map((vessel) => (
+                          <button key={vessel.id} type="button" className="locked-vessel" disabled>
+                            <span className={`vessel-icon vessel-${vessel.id}`} aria-hidden="true"><span /></span>
+                            <span>
+                              <strong>{vessel.label}</strong>
+                              <em>{vessel.hint}</em>
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <>
+                          <label className="custom-vessel-field">
+                            <span>给杯子起个名字</span>
+                            <input
+                              value={customVesselName}
+                              maxLength={12}
+                              onChange={(event) => setCustomVesselName(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key !== 'Enter') return
+                                const label = customVesselName.trim() || '我的杯子'
+                                dispatch({ type: 'SET_VESSEL', vessel: 'custom', label })
+                                setVesselPanel('')
+                              }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="btn-ghost custom-vessel-save"
+                            onClick={() => {
+                              const label = customVesselName.trim() || '我的杯子'
+                              dispatch({ type: 'SET_VESSEL', vessel: 'custom', label })
+                              setVesselPanel('')
+                            }}
+                          >
+                            用这只杯子
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {canEditRecipe && <div className="recipe-sort-panel" aria-label="配方层次排序">
             <div className="panel-title mini-title">
-              <strong>清单和时间</strong>
-              <span>拖动排序</span>
+              <strong>完整配方</strong>
+              <span>拖拽排序 · 可改时间</span>
             </div>
             <div className="recipe-sort-list">
               {state.order.map((t, i) => (
@@ -863,6 +924,11 @@ export default function OptimizePage() {
                     <span title={t.title}>{briefTitle(t.title)}</span>
                     <em>{formatDuration(t.estimatedTime)}</em>
                   </div>
+                  <RecipeTimeAdjuster
+                    value={t.estimatedTime}
+                    label={`调整第 ${i + 1} 项时间`}
+                    onChange={(minutes) => setOrderTime(t, minutes)}
+                  />
                 </div>
               ))}
             </div>
@@ -993,10 +1059,25 @@ export default function OptimizePage() {
       </div>
 
       <div className="btn-row">
-        <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'todos' })}>← 重新倾诉</button>
+        <button
+          className="btn-ghost"
+          onClick={() => {
+            if (stageMode === 'execute') {
+              setStageMode('recipe')
+              return
+            }
+            dispatch({ type: 'GO', step: 'todos' })
+          }}
+        >
+          返回配方
+        </button>
         <div className="spacer" />
-        <button className="btn-primary result-final-btn" disabled={!hasCompleted} onClick={requestFinalize}>
-          {hasCompleted ? '出杯看结果 →' : '完成后出杯'}
+        <button
+          className={`btn-primary result-final-btn ${allCompleted ? 'is-ready' : ''}`}
+          disabled={!allCompleted}
+          onClick={requestFinalize}
+        >
+          调配完成
         </button>
       </div>
 

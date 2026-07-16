@@ -52,6 +52,30 @@ const BARTENDER_SPECIALS = {
     bestWith: ['admin', 'recovery', 'creative'],
     caution: '自由度高的时候，要在最后补一个收口，不然方法很难留进冰柜。',
   },
+  osmanthus: {
+    title: '桂香收口',
+    method: '开场放轻，按节奏推进。',
+    bestWith: ['review', 'deep_work', 'recovery'],
+    caution: '桂花会把事情排得更有礼貌：不抢、不乱，但最后一定要收尾。',
+  },
+  chili: {
+    title: '一口点火',
+    method: '只给关键处开火。',
+    bestWith: ['urgent', 'deep_work'],
+    caution: '辣椒适合破拖延，不适合全程猛冲；点完火要立刻降温。',
+  },
+  mint_osmanthus: {
+    title: '清香双调',
+    method: '先降温，再收住节奏。',
+    bestWith: ['recovery', 'review', 'deep_work'],
+    caution: '适合想稳住一天但不想被催太狠的时候。',
+  },
+  lemon_chili: {
+    title: '醒神双调',
+    method: '先切清楚，再点一把火。',
+    bestWith: ['urgent', 'creative', 'deep_work'],
+    caution: '适合启动困难的日子；冲刺只能放在最关键的一口。',
+  },
 }
 
 const BARTENDER_REVIEW_VOICES = {
@@ -116,6 +140,22 @@ const BARTENDER_REVIEW_VOICES = {
     line: ({ overrun }) =>
       overrun.length ? '今天火开太久了，辣是辣，但会糊。明天只给一件事开冲刺，做完立刻降温。' : '劲儿别到处撒。明天还是抓最关键那一下，烧准一点。',
     actions: () => ['只冲刺一件', '结束马上降温'],
+  },
+  mint_osmanthus: {
+    title: '先凉下来，再慢慢收香',
+    line: ({ missing, heaviest }) =>
+      missing.length
+        ? `今天有点把${heaviest?.name || '主味'}泡急了。明天先留一口凉的，再慢慢收住，不用一开始就全倒进去。`
+        : '今天的节奏是能入口的。明天还照这个来：先稳住，再收漂亮。',
+    actions: () => ['先留缓冲', '最后收香'],
+  },
+  lemon_chili: {
+    title: '清醒一点，火别乱烧',
+    line: ({ overrun, heaviest }) =>
+      overrun.length
+        ? `${heaviest?.name || '这件事'}烧得久了点。明天入口切短，只冲最关键一口，做完马上撤火。`
+        : '今天有劲儿，也没太糊。明天继续：先说清楚，再开一小段火。',
+    actions: () => ['入口切短', '只冲关键'],
   },
 }
 
@@ -268,6 +308,8 @@ function makeFlavorTuning({ recipe, timeAccuracy, completionRate, missing, overr
 
 function bartenderKey(bartender = {}) {
   const text = `${bartender.id || ''} ${bartender.plant || ''} ${bartender.name || ''}`.toLowerCase()
+  if (/mint_osmanthus|mint-osmanthus|薄荷桂花/.test(text)) return 'mint_osmanthus'
+  if (/lemon_chili|lemon-chili|柠檬辣椒/.test(text)) return 'lemon_chili'
   if (/rosemary|迷迭香/.test(text)) return 'rosemary'
   if (/ginger|姜/.test(text)) return 'ginger'
   if (/mint|薄荷/.test(text)) return 'mint'
@@ -427,7 +469,7 @@ function makeBartenderSuggestion({ bartender, isEmptyCup, missing, overrun, unde
     return rest[key] || rest.mint
   }
   if (underrun.length) {
-    return key === 'ginger' || key === 'chili'
+  return key === 'ginger' || key === 'chili'
       ? '有些事比想象快，下次可以用它们做开场热身。'
       : '提前完成的事可以存成短配方，下次别给它留太满。'
   }
@@ -442,6 +484,86 @@ function makeBartenderSuggestion({ bartender, isEmptyCup, missing, overrun, unde
     chili: '劲儿用得准，明天继续只冲关键点。',
   }
   return keep[key] || keep.mint
+}
+
+function makeNextPlan({ bartender, isEmptyCup, heaviest, missing, overrun, underrun }) {
+  const key = bartenderKey(bartender)
+  const main = heaviest?.name || '今天这口'
+  if (isEmptyCup) {
+    const firstPour = {
+      rosemary: ['明天只端一件主线到吧台。', '做完再让小料上桌。'],
+      ginger: ['明天先开 10 分钟短火。', '热起来后再接下一口。'],
+      mint: ['明天挑一件不费劲的小事。', '旁边留一口喝水和喘气。'],
+      lemon: ['明天把入口写短。', '只留一个动作，先做起来。'],
+      garlic: ['明天先关掉会打断你的东西。', '只放一件真的要做的事进来。'],
+      cilantro: ['明天先挑顺手的一件。', '做完再看下一口。'],
+      osmanthus: ['明天温温地开场。', '最后留一句收尾，别急着倒满。'],
+      chili: ['明天只冲一件。', '冲完就降温，不连烧。'],
+      mint_osmanthus: ['明天先留缓冲。', '再把一件主线慢慢收住。'],
+      lemon_chili: ['明天入口切短。', '只给最关键的事点火。'],
+    }
+    return firstPour[key] || firstPour.mint
+  }
+
+  const notes = []
+  if (overrun.length) {
+    const line = {
+      rosemary: `${main}下次多留一格，不要挤坏后面的顺序。`,
+      ginger: '烧久的事先切两段，第一段只负责开火。',
+      mint: '长任务后面留空白，不要把自己泡到发苦。',
+      lemon: '超时的事改成短句，别一口吞下去。',
+      garlic: '会拖长的事先挡消息，做完再开门。',
+      cilantro: '卡住就换小步走，别跟它硬耗。',
+      osmanthus: '慢任务提早上桌，让香气有时间散开。',
+      chili: '冲刺只给一件事，其他别跟着烧。',
+      mint_osmanthus: '重的事情后面留凉口，收尾慢一点。',
+      lemon_chili: '只烧关键那一下，超时就立刻切段。',
+    }
+    notes.push(line[key] || line.mint)
+  }
+  if (missing.includes('恢复奶泡')) {
+    const rest = {
+      rosemary: '主线后必须留缓冲，不然酒单会塌。',
+      ginger: '冲完要降温，休息不是偷懒。',
+      mint: '把休息写进清单里，别等累透才补。',
+      lemon: '加一个短停顿，下一口会更清楚。',
+      garlic: '恢复时间也要守住，别让别人拿走。',
+      cilantro: '中间塞一口轻的，清单会更好继续。',
+      osmanthus: '留一段安静，香气才收得住。',
+      chili: '火太密会辣到自己，记得降温。',
+      mint_osmanthus: '先凉一口，再继续也来得及。',
+      lemon_chili: '点火之后马上喝水，别硬撑。',
+    }
+    notes.push(rest[key] || rest.mint)
+  }
+  if (heaviest?.category === 'admin' || heaviest?.category === 'communication') {
+    notes.push(key === 'garlic' ? '消息和杂事收进同一盘。' : '碎事集中成一段，不让它们满场跑。')
+  }
+  if (heaviest?.category === 'deep_work' || heaviest?.category === 'creative') {
+    notes.push(key === 'osmanthus' ? '主线慢慢喝，最后留余味。' : '主线保留，后面接一口短休息。')
+  }
+  if (!overrun.length && underrun.length) {
+    notes.push(key === 'ginger' || key === 'chili' ? '快完成的小事可当开场热身。' : '提前完成的事，下次别给太满。')
+  }
+  if (missing.includes('肉桂封口')) {
+    notes.push(key === 'osmanthus' ? '最后留一句漂亮收尾。' : '最后留 5 分钟，把有效做法记住。')
+  }
+  if (!notes.length) {
+    const keep = {
+      rosemary: '今天前三步可以留作固定开场。',
+      ginger: '保留这个起势，别把开局改重。',
+      mint: '这个节奏舒服，明天照着来。',
+      lemon: '保持清爽，不再加长说明。',
+      garlic: '边界守得住，继续集中处理碎事。',
+      cilantro: '顺手的入口留住，别过度整理。',
+      osmanthus: '今天的余味可以存起来。',
+      chili: '劲儿用得准，继续只冲关键点。',
+      mint_osmanthus: '先缓后收，这个手感可以留。',
+      lemon_chili: '先醒神再冲刺，这口可以复用。',
+    }
+    notes.push(keep[key] || keep.mint)
+  }
+  return [...new Set(notes)].slice(0, 3)
 }
 
 function makeBartenderMemoryLine({ bartender, completedCount, heaviest, isEmptyCup }) {
@@ -556,30 +678,7 @@ function makeReport({ todos, recipe, records, completionRate, timeAccuracy, isEm
     blueprintNotes.push(`缺口：${missing.join('、')}不足，说明今天有些状态没有被好好接住。`)
   }
 
-  const nextPlan = []
-  if (isEmptyCup) {
-    nextPlan.push('明天只放一件 10-15 分钟的小事。')
-  } else {
-    if (heaviest?.category === 'admin' || heaviest?.category === 'communication') {
-      nextPlan.push('消息和杂事合并成两段处理。')
-    }
-    if (heaviest?.category === 'deep_work' || heaviest?.category === 'creative') {
-      nextPlan.push('主线保留，长任务后加一段短休息。')
-    }
-    if (overrun.length) {
-      nextPlan.push('超时的同类任务，明天先多留 20%。')
-    }
-    if (!overrun.length && underrun.length) {
-      nextPlan.push('提前完成的任务，下次可以调轻一点。')
-    }
-    if (missing.includes('恢复奶泡')) {
-      nextPlan.push('加一个回神点：喝水、走动或整理桌面。')
-    }
-    if (missing.includes('肉桂封口')) {
-      nextPlan.push('最后留 5 分钟收口，记下有效做法。')
-    }
-    if (!nextPlan.length) nextPlan.push('保留今天最顺的前三步。')
-  }
+  const nextPlan = makeNextPlan({ bartender, isEmptyCup, heaviest, missing, overrun, underrun })
 
   return {
     totalEstimated,

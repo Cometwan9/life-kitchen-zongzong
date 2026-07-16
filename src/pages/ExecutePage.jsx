@@ -266,6 +266,7 @@ export default function ExecutePage() {
   }
 
   function requestFinalize() {
+    if (!hasCompleted) return
     setConfirmGenerate(true)
   }
 
@@ -353,10 +354,6 @@ export default function ExecutePage() {
             <div className="toolbar-title">吧台操作台</div>
             <div className="muted-note">点一张时间卡开始。完成后，种种会记下真实用时。</div>
           </div>
-          <button className="btn-ghost result-jump-action" disabled={activeId} onClick={requestFinalize}>
-            <span>{hasCompleted ? '出杯看结果 →' : '空杯看结果 →'}</span>
-            <small>{hasCompleted ? '查看最终出品' : '还没完成，会是空杯'}</small>
-          </button>
         </div>
         <div className={`execute-current-strip ${active ? 'brewing' : ''}`} style={{ '--time-tone': PLAN_TONES[(active || nextTask)?.taskType] || PLAN_TONES.fallback }}>
           <span className="idx">{active ? '▶' : nextTask ? state.order.findIndex((t) => t.id === nextTask.id) + 1 : '✓'}</span>
@@ -379,26 +376,24 @@ export default function ExecutePage() {
       </div>
 
       <div className="btn-row">
-        <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'optimize' })}>← 上一步</button>
+        <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'optimize' })}>上一步</button>
         <div className="spacer" />
-        <button className="btn-primary result-final-btn" onClick={requestFinalize}>
-          {hasCompleted ? '出杯看结果 →' : '留一只空杯 →'}
+        <button className="btn-primary result-final-btn" disabled={!hasCompleted} onClick={requestFinalize}>
+          {hasCompleted ? '调配完成' : '完成后出杯'}
         </button>
       </div>
 
       {confirmGenerate && (
         <div className="confirm-panel" role="dialog" aria-modal="true" aria-label="确认直接调配">
           <div className="confirm-card">
-            <div className="confirm-title">{hasCompleted ? '现在出杯？' : '现在看空杯？'}</div>
+            <div className="confirm-title">现在出杯？</div>
             <p>
-              {hasCompleted
-                ? '会进入最终出品页；还没打勾的会留在清单里，不会算作完成。'
-                : '还没有完成项，结果页会显示空杯，适合只想先存个记录的时候。'}
+              会进入最终出品页；还没打勾的会留在清单里，不会算作完成。
             </p>
             <div className="btn-row">
               <button className="btn-ghost" onClick={() => setConfirmGenerate(false)}>再看看清单</button>
               <div className="spacer" />
-              <button className="btn-primary" onClick={finalizeNow}>{hasCompleted ? '确认出杯' : '确认空杯'}</button>
+              <button className="btn-primary" onClick={finalizeNow}>确认出杯</button>
             </div>
           </div>
         </div>

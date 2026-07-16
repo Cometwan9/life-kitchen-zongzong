@@ -16,6 +16,10 @@ export const BODY = {
   lemon: '#F3D955',
   garlic: '#DCEBC5',
   cilantro: '#9CC15B',
+  osmanthus: '#F4D66C',
+  chili: '#EA5A45',
+  mint_osmanthus: '#B6DFA5',
+  lemon_chili: '#F2A45A',
 }
 
 const accentFor = (bartender) => {
@@ -32,7 +36,12 @@ const BADGE_LABELS = {
   cilantro: '灵活招待',
   chili: '冲刺火手',
   osmanthus: '优雅老板娘',
+  mint_osmanthus: '清香双调',
+  lemon_chili: '醒神双调',
 }
+
+const visitDaysFromState = (state) =>
+  Math.max(1, new Set([state.today, ...(state.cellar || []).map((item) => item.date).filter(Boolean)]).size)
 
 const formatClock = (date) =>
   date.toLocaleTimeString('zh-CN', {
@@ -110,7 +119,9 @@ export default function BartenderPage() {
     setIdx((i) => (i + dir + methodSlots.length) % methodSlots.length)
   }
   const cur = methodSlots[idx] || methodSlots[0]
-  const canSummon = !cur.placeholder
+  const visitDays = visitDaysFromState(state)
+  const lockedByVisit = Boolean(cur.unlockDays && visitDays < cur.unlockDays)
+  const canSummon = !cur.placeholder && !lockedByVisit
   const canAct = canSummon || cur.helper || cur.customCreator
 
   useEffect(() => {
@@ -168,13 +179,20 @@ export default function BartenderPage() {
   }
 
   const chooseForMe = () => {
-    const currentRealIndex = BARTENDERS.findIndex((b) => b.id === state.bartenderId)
-    const nextRealIndex = (currentRealIndex + 1 + Math.floor(Math.random() * (BARTENDERS.length - 1))) % BARTENDERS.length
+    const available = BARTENDERS.filter((b) => !b.unlockDays || visitDays >= b.unlockDays)
+    const currentRealIndex = available.findIndex((b) => b.id === state.bartenderId)
+    const nextRealIndex = (currentRealIndex + 1 + Math.floor(Math.random() * Math.max(1, available.length - 1))) % available.length
+    const nextId = available[nextRealIndex]?.id
+    const slotIndex = methodSlots.findIndex((b) => b.id === nextId)
     setArmedId(null)
-    setIdx(nextRealIndex)
+    setIdx(slotIndex >= 0 ? slotIndex : 0)
   }
 
   const summonDesktopPet = async () => {
+    if (lockedByVisit) {
+      setPetSummonNote(`${cur.name}还在熟客酒柜里。再来 ${cur.unlockDays - visitDays} 天就能邀请。`)
+      return
+    }
     if (!canSummon) {
       setPetSummonNote('先选定一只种种，再把它召唤到桌面。')
       return
@@ -199,6 +217,11 @@ export default function BartenderPage() {
       chooseForMe()
       return
     }
+    if (lockedByVisit) {
+      setPetSummonNote(`${cur.unlockText || `酒馆来访 ${cur.unlockDays} 天后解锁`}。`)
+      setDetailsOpen(true)
+      return
+    }
     if (!canSummon) return
     setSummonBartender(cur)
     setSummoning(true)
@@ -221,6 +244,11 @@ export default function BartenderPage() {
     }
     if (cur.helper) {
       chooseForMe()
+      return
+    }
+    if (lockedByVisit) {
+      setPetSummonNote(`${cur.unlockText || `酒馆来访 ${cur.unlockDays} 天后解锁`}。`)
+      setDetailsOpen(true)
       return
     }
     if (!canSummon) return
@@ -286,6 +314,18 @@ export default function BartenderPage() {
   }
 
   const heroArmed = armedId === cur.id && canSummon && !summoning
+  const renderPetImage = (bartender, className = 'hero-pet-img sprite-bob') => {
+    if (bartender.blendImages?.length) {
+      return (
+        <div className="blend-pet-pair" aria-label={bartender.name}>
+          {bartender.blendImages.slice(0, 2).map((src, index) => (
+            <img key={src} className={`blend-pet-img blend-${index}`} src={src} alt="" />
+          ))}
+        </div>
+      )
+    }
+    return <img className={className} src={bartender.image} alt={bartender.name} />
+  }
 
   return (
     <div className="summon-page">
@@ -310,11 +350,11 @@ export default function BartenderPage() {
           onKeyDown={onHeroKeyDown}
           role="button"
           tabIndex={canAct && !summoning ? 0 : -1}
-          aria-label={heroArmed ? `确认召唤 ${cur.name}` : `选中 ${cur.name}`}
+          aria-label={lockedByVisit ? `${cur.name}尚未解锁` : heroArmed ? `确认召唤 ${cur.name}` : `选中 ${cur.name}`}
         >
-          <div className={`hero-sprite pet-${cur.id} ${cur.image ? 'has-image' : ''} ${heroArmed ? 'confirm-ready' : ''} ${summoning ? 'happy-summon' : ''}`}>
+          <div className={`hero-sprite pet-${cur.id} ${cur.image ? 'has-image' : ''} ${cur.blendImages ? 'has-blend' : ''} ${lockedByVisit ? 'is-locked' : ''} ${heroArmed ? 'confirm-ready' : ''} ${summoning ? 'happy-summon' : ''}`}>
             {cur.image ? (
-              <img className="hero-pet-img sprite-bob" src={cur.image} alt={cur.name} />
+              renderPetImage(cur)
             ) : cur.placeholder ? (
               <div className={`placeholder-sprite ${cur.placeholder}`} aria-hidden="true">
                 {cur.placeholder === 'plus' ? '+' : '?'}
@@ -326,6 +366,7 @@ export default function BartenderPage() {
             <span className="happy-spark s2" aria-hidden="true" />
             <span className="happy-spark s3" aria-hidden="true" />
             <span className="confirm-orbit" aria-hidden="true" />
+            {lockedByVisit && <span className="unlock-badge" aria-hidden="true">{cur.unlockDays}日</span>}
             {!cur.helper && <span className={`role-badge badge-${cur.id}`} aria-hidden="true">
               <b>{BADGE_LABELS[cur.id] || '专属调酒师'}</b>
               <i />
@@ -333,8 +374,8 @@ export default function BartenderPage() {
           </div>
           <div className="hero-name">{cur.name}</div>
           <div className="hero-tags" aria-label={`${cur.name} 的基础标签`}>
-            <span>{BADGE_LABELS[cur.id] || cur.style || '今日调酒师'}</span>
-            <span>{cur.style || cur.fit}</span>
+            <span>{lockedByVisit ? cur.unlockText : BADGE_LABELS[cur.id] || cur.style || '今日调酒师'}</span>
+            <span>{lockedByVisit ? `还差 ${cur.unlockDays - visitDays} 天熟客记录` : cur.style || cur.fit}</span>
           </div>
         </div>
 
@@ -351,7 +392,7 @@ export default function BartenderPage() {
             </button>
             <div className="sprite-detail-image">
               {cur.image ? (
-                <img src={cur.image} alt={cur.name} />
+                cur.blendImages?.length ? renderPetImage(cur, 'sprite-detail-img') : <img src={cur.image} alt={cur.name} />
               ) : (
                 <PixelSprite sprite={CREATURE} scale={7} colors={{ b: BODY[cur.id] || '#7FBFA6' }} />
               )}
@@ -361,9 +402,10 @@ export default function BartenderPage() {
               <h3>{cur.name}</h3>
               <p>{cur.fit}</p>
               <p>{cur.blurb}</p>
+              {lockedByVisit && <p className="unlock-copy">{cur.unlockText}。现在酒馆来访 {visitDays} 天。</p>}
             </div>
-            <button className="btn-primary sprite-detail-action" type="button" onClick={summon}>
-              邀请它
+            <button className="btn-primary sprite-detail-action" type="button" disabled={lockedByVisit} onClick={summon}>
+              {lockedByVisit ? `还差 ${cur.unlockDays - visitDays} 天` : '邀请它'}
             </button>
           </section>
         </div>

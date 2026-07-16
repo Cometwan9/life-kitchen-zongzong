@@ -7,6 +7,8 @@ import lemonSpriteUrl from '../../assets/sprites/lemon.png'
 import garlicSpriteUrl from '../../assets/sprites/garlic.png'
 import gingerSpriteUrl from '../../assets/sprites/ginger.png'
 import cilantroSpriteUrl from '../../assets/sprites/cilantro.png'
+import osmanthusSpriteUrl from '../../assets/sprites/osmanthus.jpg'
+import chiliSpriteUrl from '../../assets/sprites/chili.jpg'
 
 export const BARTENDERS = [
   {
@@ -80,6 +82,60 @@ export const BARTENDERS = [
     strategy: 'light_first', // 从轻任务进入，允许调整顺序
     reminderTone: '像朋友一样商量',
     blurb: '他不会逼你按表走，会先挑一件顺手的事陪你试试。',
+  },
+  {
+    id: 'osmanthus',
+    name: '桂花种种',
+    plant: 'osmanthus',
+    emoji: '✦',
+    image: osmanthusSpriteUrl,
+    style: '优雅、慢热、很讲节奏',
+    fit: '今天事情不算少，但你想稳稳当当、有余味地做完',
+    strategy: 'deep_first',
+    reminderTone: '像熟客老板娘一样轻轻提点',
+    blurb: '她会把事情排得不慌不忙：先闻香，再入口，最后一定要收得漂亮。',
+  },
+  {
+    id: 'chili',
+    name: '辣椒种种',
+    plant: 'chili',
+    emoji: '✦',
+    image: chiliSpriteUrl,
+    style: '爆发、直球、热得很快',
+    fit: '你需要一点冲劲，把拖很久的事直接点燃的时候',
+    strategy: 'ignite_first',
+    reminderTone: '短促、带火花',
+    blurb: '她不爱绕弯，会把最该动手的那一下直接推到你面前。',
+  },
+  {
+    id: 'mint_osmanthus',
+    name: '薄荷桂花种种',
+    plant: 'mint-osmanthus',
+    emoji: '✦',
+    image: mintSpriteUrl,
+    blendImages: [mintSpriteUrl, osmanthusSpriteUrl],
+    style: '清凉、有礼、慢慢稳住',
+    fit: '想放松一点，但又不想今天完全失去节奏',
+    strategy: 'recovery_buffer',
+    reminderTone: '轻声递茶',
+    blurb: '她们会先替你降温，再把顺序摆好：不催，但也不让事情散掉。',
+    unlockDays: 3,
+    unlockText: '酒馆来访 3 天后解锁',
+  },
+  {
+    id: 'lemon_chili',
+    name: '柠檬辣椒种种',
+    plant: 'lemon-chili',
+    emoji: '✦',
+    image: lemonSpriteUrl,
+    blendImages: [lemonSpriteUrl, chiliSpriteUrl],
+    style: '清醒、冲刺、一下子醒神',
+    fit: '拖延很久、需要被点醒并快速开工的时候',
+    strategy: 'ignite_first',
+    reminderTone: '爽快催开局',
+    blurb: '她们会先把话说亮，再点一小把火：今天别拖，先做一口。',
+    unlockDays: 7,
+    unlockText: '酒馆来访 7 天后解锁',
   },
 ]
 

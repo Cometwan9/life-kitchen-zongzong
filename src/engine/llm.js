@@ -49,25 +49,29 @@ async function callOpenAIPlanner(text) {
     strategy: exp.strategy,
     apply: exp.apply,
   }))
-  const system = `你是 Life Kitchen 的规划抽取器，要从用户随口说的话里辨别真正可执行、可安排、可完成的事项。
+  const system = `你是 Life Kitchen 的规划抽取器，要从用户随口说的话里辨别真正可执行、可安排、可完成的事项。你的目标不是安慰用户，而是把口语段落拆成可打勾、可计时、可完成的动作。
 
 抽取原则：
 1. 先做信息筛选：把原话拆成"动作对象 / 时间 / 情绪 / 背景 / 诉求"。只有同时具备动作或明确对象的内容才能进入 todos。
-2. 只把"需要做的事 / 已承诺的事 / 要回复、写、讨论、整理、运动、复盘、购买、提交、处理"列入 todos。
+2. 只把"需要做的事 / 已承诺的事 / 要回复、写、讨论、整理、运动、复盘、购买、提交、处理、拍摄、录屏、截图、补充素材"列入 todos。
 3. 情绪、抱怨、背景、语气词不能单独成为 todo，例如"我好烦""今天很乱""有点累""不知道空闲时间干嘛"。这些只能进入 ignoredContext。
-4. 不要漏掉隐性任务：例如"设定表一直挂在心上"应抽成"推进设定表"；"老师那边的信息"应抽成"回复老师信息"。
+4. 不要漏掉隐性任务：例如"设定表一直挂在心上"应抽成"推进设定表"；"老师那边的信息"应抽成"回复老师信息"；"材料很散"若有明确目标，应抽成"整理材料"。
 5. 如果一个句子里既有情绪又有行动，只保留行动标题，例如"我有点累但还想运动半小时"抽成 title="运动"，estimatedTime=30。
 6. 标题要像用户能勾选的事项，不能写成情绪描述，也不要把"上午/下午/晚上/45分钟"写进 title；时间放 estimatedTime。
-7. 口语里的"能不能/我想/感觉/就是/那个/比较"不是任务内容，除非后面接了具体事项。
+7. 口语里的"能不能/我想/感觉/就是/那个/比较/怎么安排/想被照顾"不是任务内容，除非后面接了具体事项。
 8. 不确定但可能需要安排的内容也放进 todos，并把 confidence 降低；不要因为语气含糊就漏掉具体对象。
 9. estimatedTime 没明确给出时，结合 taskType 和复杂度估计分钟数。
 10. evidence 必须是触发这个任务的原话片段，用于后续校验，不要写推理过程。
 11. 参考 Evo Map 配方，但不要输出配方文字到 title：${JSON.stringify(evoMap)}。
+12. 一个片段里有多个对象时要拆开。例如"完成 Logo 设计、截图录视频、提交需求和 UI 素材"应拆成"完成 Logo 设计"、"截图并录制视频"、"提交需求和 UI 素材"。
+13. 如果用户明确在问"有一段空闲时间怎么安排"，且给了时长或状态，可以生成 2-3 个轻量动作：一个低阻力推进、一个喝水/远眺/走动恢复、一个记录下一步。它们必须是能马上做的短动作，不要写成泛泛建议。
 
 例子：
 - "我今天很烦，脑子乱，不知道空闲时间做什么" => todos=[]，ignoredContext 包含情绪和空闲困惑。
+- "我现在有40分钟空闲，有点累，不想浪费" => todos=["挑一件不用硬撑的小事","喝水远眺让眼睛离开屏幕","记下回来要接的下一步"]。
 - "我有点烦，但PRD要写完，老师消息也要回" => todos=["写完PRD","回复老师消息"]。
 - "设定表一直挂在心上，截图还没找" => todos=["推进设定表","整理截图"]。
+- "今天要完成关于Logo的设计，截图录视频，以及提交一些需求和UI素材" => todos=["完成Logo设计","截图并录制视频","提交需求和UI素材"]。
 
 taskType 七选一：${TYPE_ENUM.join('/')}。
 只输出符合 schema 的 JSON。`
@@ -222,7 +226,9 @@ function isNonTaskFragment(title) {
   const objectHints = /(作业|论文|报告|方案|文档|表|课|题|邮件|消息|会议|代码|设计|稿|图|视频|音频|材料|资料|账单|快递|运动|训练|复盘|项目|需求|接口|页面|简历)/
   const pureTime = /^(上午|下午|晚上|中午|早上|今晚|明天|后天|周[一二三四五六日天]|星期[一二三四五六日天]|\d{1,2}点|\d{1,3}(分钟|min|小时|h)|半小时|一小时)+$/
   const pureState = /^(累|困|烦|焦虑|开心|难受|崩溃|低落|不想干|没精神|压力大|卡住|很乱|太乱|好烦|有点烦|有点累|emo)+$/
-  if (pureTime.test(cleaned) || pureState.test(cleaned)) return true
+  const pureQuestion = /^(可以|能不能|可不可以|有没有|怎么|怎样|如何|要不要|是不是|我该|应该).{0,24}(安排|做|管理|推进|处理|选择|开始|下手|规划|利用).*$/
+  const noUsefulObject = /^(想|希望|需要)?(被)?(照顾|陪伴|鼓励|安慰|提醒|管理|安排)$/
+  if (pureTime.test(cleaned) || pureState.test(cleaned) || pureQuestion.test(cleaned) || noUsefulObject.test(cleaned)) return true
   return !actionWords.test(cleaned) && !objectHints.test(cleaned)
 }
 
@@ -244,13 +250,16 @@ function cleanTitle(title, evidence = '') {
     .replace(/^(能|可以|最好能|最好可以)/, '')
     .replace(/一下/g, '')
     .replace(/那边的?/g, '')
+    .replace(/^关于/, '')
+    .replace(/关于/g, '')
     .trim()
   if (/消息|微信|邮件|私信|通知|信息/.test(cleaned) && !/^(回|回复|联系)/.test(cleaned)) return `回复${cleaned.replace(/信息$/, '消息')}`
   if (/截图|资料|材料|文件|票据|报销|账单/.test(cleaned) && !/^(整理|找|处理)/.test(cleaned)) return `整理${cleaned}`
   if (/写完/.test(raw) && !/^(写|完成)/.test(cleaned)) return `写完${cleaned}`
   if (/做完/.test(raw) && !/^(做|完成)/.test(cleaned)) return `做完${cleaned}`
   if (/论文|文档|报告|稿/.test(cleaned) && /改|修改/.test(raw)) return `修改${cleaned.replace(/^(改|修改)/, '')}`
-  if (/表|设定|方案|文档|报告|论文|稿|页面|设计|代码|需求|项目|作品集|作业|课题/.test(cleaned) && !/^(推进|写|做|改|整理|讨论|设计|提交)/.test(cleaned)) return `推进${cleaned}`
+  if (/^(截屏|截图|录屏|录视频|拍视频|剪视频)/.test(cleaned)) return cleaned.replace(/^录视频/, '录制视频')
+  if (/表|设定|方案|文档|报告|论文|稿|页面|设计|代码|需求|项目|作品集|作业|课题|素材|图标|icon|logo|Logo/.test(cleaned) && !/^(推进|写|做|改|整理|讨论|设计|提交|补充|确认|截图|截屏|录屏|录制|拍|剪)/.test(cleaned)) return `推进${cleaned}`
   if (cleaned && !isNonTaskFragment(cleaned) && !isEmotionOnly(cleaned)) return cleaned
   return deriveImplicitAction(evidence || title)
 }
@@ -323,8 +332,10 @@ export async function parseTodosSmart(text) {
   }
   try {
     const system = `你是 Life Kitchen 的调酒师。用户不是在填待办表，而是在吧台随口聊今天发生的事、惦记的事、想处理的事；请从这段话里听出今天真正需要处理的事项，并拆成结构化待办。
-重要：情绪、抱怨、背景、语气词不能单独成为待办。它们只能影响 emotionalLoad。不要把"我很累/今天很乱/有点焦虑"当作 title。
+重要：情绪、抱怨、背景、语气词不能单独成为待办。它们只能影响 emotionalLoad。不要把"我很累/今天很乱/有点焦虑/怎么安排/想被照顾"当作 title。
+如果用户明确是在问一段空闲时间怎么用，并给了时长或状态，可以生成轻量行动，例如"挑一件不用硬撑的小事"、"喝水远眺让眼睛离开屏幕"、"记下回来要接的下一步"。
 不要漏掉隐性任务：例如"设定表一直挂在心上"应抽成"整理设定表"。
+一个长句中出现多个对象或动作时要拆开，例如"Logo设计、截图录视频、提交需求和UI素材"要拆成三个任务。
 如果原话是"我有点累但还想运动半小时"，title 写"运动"，estimatedTime 写 30。
 只输出 JSON 数组，每个元素字段：
 - title: 简短可勾选任务名，不含情绪词、时段词和分钟数

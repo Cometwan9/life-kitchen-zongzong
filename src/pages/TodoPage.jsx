@@ -18,37 +18,37 @@ const ASSISTANT_MODES = {
   daily: {
     label: '今日调酒',
     title: '和种种聊聊今天',
-    subtitle: '把今天发生的事写下来就好。种种会帮你整理成可以执行的酒单。',
+    subtitle: '坐到吧台边，先随口说今天。种种会把真正要做的事拣出来。',
     field: '今天想和种种说什么？',
     action: '整理一遍',
     redo: '重新整理',
     paper: '今日配料纸',
     next: '请今日调酒师定制配方 →',
-    note: (count) => `调酒师听出了 ${count} 个心事片段，可以继续改写和调整时间。`,
+    note: (count) => `种种听出了 ${count} 件能落地的事。你可以再改两笔。`,
     placeholder: SAMPLE,
   },
   free_time: {
-    label: '空闲小酌',
-    title: '问问这段空闲怎么用',
-    subtitle: '告诉种种你现在有多久、什么状态、手边有什么限制，它会给出一小段可执行安排。',
+    label: '留白小酌',
+    title: '把空档调成一小杯',
+    subtitle: '有一小段空档，就交给吧台。想休息还是推进一点，都可以说。',
     field: '现在这段空闲是什么情况？',
-    action: '调一杯建议',
+    action: '调一杯安排',
     redo: '重新建议',
-    paper: '空闲小酌单',
-    next: '生成这段空闲时间表 →',
-    note: (count) => `种种给这段空闲配了 ${count} 个可选小动作，可以挑一项或直接进入调配。`,
+    paper: '留白配方',
+    next: '排好这段空档 →',
+    note: (count) => `这段空档可以装进 ${count} 个小动作。轻一点也算数。`,
     placeholder: '我现在大概有 40 分钟空闲，有点累但不想浪费。电脑在身边，不太想做很重的事，可以安排点什么？',
   },
   long_goal: {
-    label: '长期酿造',
-    title: '把长期目标酿成今天的一小口',
-    subtitle: '告诉种种你想长期推进什么、期限和卡点，它会拆出今天能完成的任务并留下记录。',
+    label: '慢慢酿',
+    title: '把远一点的事切成今天一口',
+    subtitle: '远一点的事不用一次说完。先告诉种种终点和卡住的地方。',
     field: '这个长期目标想怎么推进？',
-    action: '拆成今日任务',
+    action: '拆出今天一步',
     redo: '重新拆解',
     paper: '配方',
-    next: '生成今日推进安排 →',
-    note: (count) => `种种从长期目标里拆出了 ${count} 个今日推进动作，后续可以存进你的冰柜记录。`,
+    next: '排好今天这一口 →',
+    note: (count) => `从远目标里先切出 ${count} 口。今天只尝这一小段。`,
     placeholder: '我想在一个月内把作品集整理出来，但现在材料很散，也不知道每天该推进什么。今天只有一小时，可以先做哪几步？',
   },
 }
@@ -174,49 +174,16 @@ function inferFreeMinutes(text) {
 }
 
 function fallbackModeTodos(mode, input, parsedTodos) {
-  if (mode === 'daily') return parsedTodos
+  const freeIntent = /空闲|空档|碎片时间|没事做|不知道(做什么|干嘛)|不想浪费|休息一下|放松|脑子空|卡住/.test(input)
+  if (mode === 'daily') {
+    if (!parsedTodos.length && freeIntent) {
+      return buildFreeTimeTodos(input)
+    }
+    return parsedTodos
+  }
   const now = Date.now()
   if (mode === 'free_time') {
-    const minutes = inferFreeMinutes(input)
-    const light = /累|困|没精神|低能量|不想/.test(input)
-    const focus = Math.max(10, Math.min(light ? 20 : 35, Math.floor(minutes * 0.55)))
-    const reset = Math.max(5, Math.min(15, Math.floor(minutes * 0.22)))
-    const close = Math.max(5, minutes - focus - reset)
-    return [
-      {
-        id: `todo_${now}_free_0`,
-        title: light ? '选一件低阻力小事' : '处理一件最顺手的事',
-        estimatedTime: focus,
-        taskType: light ? 'admin' : 'deep_work',
-        energyCost: light ? 'low' : 'medium',
-        emotionalLoad: light ? 'medium' : 'low',
-        priority: 'medium',
-        mustDo: false,
-        status: 'pending',
-      },
-      {
-        id: `todo_${now}_free_1`,
-        title: '喝水走动让状态回温',
-        estimatedTime: reset,
-        taskType: 'recovery',
-        energyCost: 'low',
-        emotionalLoad: 'low',
-        priority: 'low',
-        mustDo: false,
-        status: 'pending',
-      },
-      {
-        id: `todo_${now}_free_2`,
-        title: '记录下一步要接哪里',
-        estimatedTime: close,
-        taskType: 'review',
-        energyCost: 'low',
-        emotionalLoad: 'low',
-        priority: 'medium',
-        mustDo: false,
-        status: 'pending',
-      },
-    ]
+    return buildFreeTimeTodos(input, now)
   }
   if (mode === 'long_goal') {
     const base = parsedTodos.length ? parsedTodos.slice(0, 3) : []
@@ -262,6 +229,50 @@ function fallbackModeTodos(mode, input, parsedTodos) {
     ]
   }
   return parsedTodos
+}
+
+function buildFreeTimeTodos(input, now = Date.now()) {
+  const minutes = inferFreeMinutes(input)
+  const light = /累|困|没精神|低能量|不想|烦|焦虑|头疼/.test(input)
+  const outside = /外面|户外|散步|走走|远眺|窗/.test(input)
+  const focus = Math.max(8, Math.min(light ? 18 : 32, Math.floor(minutes * 0.48)))
+  const reset = Math.max(5, Math.min(12, Math.floor(minutes * 0.24)))
+  const close = Math.max(4, minutes - focus - reset)
+  return [
+    {
+      id: `todo_${now}_free_0`,
+      title: light ? '挑一件不用硬撑的小事' : '先做一件最顺手的小事',
+      estimatedTime: focus,
+      taskType: light ? 'admin' : 'deep_work',
+      energyCost: light ? 'low' : 'medium',
+      emotionalLoad: light ? 'medium' : 'low',
+      priority: 'medium',
+      mustDo: false,
+      status: 'pending',
+    },
+    {
+      id: `todo_${now}_free_1`,
+      title: outside ? '喝水远眺或走一小圈' : '喝水远眺让眼睛离开屏幕',
+      estimatedTime: reset,
+      taskType: 'recovery',
+      energyCost: 'low',
+      emotionalLoad: 'low',
+      priority: 'low',
+      mustDo: false,
+      status: 'pending',
+    },
+    {
+      id: `todo_${now}_free_2`,
+      title: '记下回来要接的下一步',
+      estimatedTime: close,
+      taskType: 'review',
+      energyCost: 'low',
+      emotionalLoad: 'low',
+      priority: 'medium',
+      mustDo: false,
+      status: 'pending',
+    },
+  ]
 }
 
 const TALK_LINES = {
@@ -334,6 +345,7 @@ export default function TodoPage() {
   const bartender = getBartender(state.lockedBartenderId || state.bartenderId, state.customBartenders)
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [ticketServing, setTicketServing] = useState(false)
   const [lineIndex, setLineIndex] = useState(0)
   const [listening, setListening] = useState(false)
   const [voiceStatus, setVoiceStatus] = useState('')
@@ -397,6 +409,7 @@ export default function TodoPage() {
   async function parse() {
     const input = text.trim() || modeConfig.placeholder
     setLoading(true)
+    setTicketServing(false)
     const res = await parseTodosSmart(input)
     const modeTodos = fallbackModeTodos(mode, input, res.todos)
     dispatch({ type: 'SET_TODOS', todos: modeTodos, mode, note: input })
@@ -404,9 +417,10 @@ export default function TodoPage() {
     setRecipeCollapsed(false)
     setBottling(false)
     setLoading(false)
+    setTicketServing(true)
     window.setTimeout(() => {
       dispatch({ type: 'GO', step: 'optimize' })
-    }, 120)
+    }, 520)
   }
 
   function bottleRecipe() {
@@ -622,7 +636,7 @@ export default function TodoPage() {
   return (
     <div>
       <h2 className="title">{isQuickMode ? '今天要做什么？' : modeConfig.title}</h2>
-      <p className="subtitle">{isQuickMode ? '写一段话就好，我会整理成能直接执行的清单。' : modeConfig.subtitle}</p>
+      <p className="subtitle">{isQuickMode ? '先把今天放到吧台上，别急着整理。种种会听出能开做的部分。' : modeConfig.subtitle}</p>
 
       <div className={`assistant-mode-tabs ${isQuickMode ? 'quick-visible' : ''}`} role="tablist" aria-label="选择种种助理模式">
         {Object.entries(ASSISTANT_MODES).map(([key, item]) => (
@@ -640,7 +654,7 @@ export default function TodoPage() {
               <img src={MODE_ICONS[key]} alt="" />
             </i>
             <strong>{item.label}</strong>
-            <span>{key === 'daily' ? '安排今天' : key === 'free_time' ? '用好空档' : '拆长期目标'}</span>
+            <span>{key === 'daily' ? '安排今天' : key === 'free_time' ? '留一点气口' : '把远事切小'}</span>
           </button>
         ))}
       </div>
@@ -671,7 +685,7 @@ export default function TodoPage() {
           <div className="bar-counter" aria-hidden="true" />
         </div>}
 
-        <div className="talk-card">
+        <div className={`talk-card ${loading ? 'is-organizing' : ''} ${ticketServing ? 'ticket-serving' : ''}`}>
           <label className="field">{isQuickMode ? '今天的事' : modeConfig.field}</label>
           <textarea
             placeholder={modeConfig.placeholder}
@@ -685,9 +699,19 @@ export default function TodoPage() {
             <button className="btn-ghost" onClick={() => setText(modeConfig.placeholder)}>用示例</button>
             <div className="spacer" />
             <button className="btn-primary" onClick={parse} disabled={loading}>
-              {loading ? '整理中…' : todos.length ? '重新整理' : '整理清单'}
+              {loading ? '收小票中…' : todos.length ? '重新整理' : '整理清单'}
             </button>
           </div>
+          {(loading || ticketServing) && (
+            <div className="ticket-serve-motion" aria-live="polite">
+              <span className="ticket-paper" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <strong>{loading ? '种种正在听重点' : '小票递到吧台了'}</strong>
+            </div>
+          )}
           {voiceStatus && <div className="voice-status">{voiceStatus}</div>}
           {parseMeta && (
             <div className="parse-signal" aria-live="polite">
@@ -789,7 +813,7 @@ export default function TodoPage() {
       )}
 
       <div className="btn-row">
-        {!isQuickMode && <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'bartender' })}>← 上一步</button>}
+        {!isQuickMode && <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'bartender' })}>上一步</button>}
         <div className="spacer" />
       </div>
       {deleteTarget && (

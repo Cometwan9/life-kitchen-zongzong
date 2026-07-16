@@ -303,34 +303,49 @@ export default function RevealPage() {
     { key: 'report', label: '报告' },
   ]
 
+  const activeTab = revealTabs.find((tab) => tab.key === activePanel)
+
+  useEffect(() => {
+    document.body.classList.toggle('reveal-subpage-open', Boolean(activePanel))
+    return () => document.body.classList.remove('reveal-subpage-open')
+  }, [activePanel])
+
   return (
-    <div>
-      <div className="reveal-in" style={{ animationDelay: '.1s' }}>
-        <SpecialCard card={card} bartender={bartender} reportOpen={false} />
-      </div>
+    <div className={`reveal-page ${activePanel ? 'is-subpage' : ''}`}>
+      {!activePanel && (
+        <>
+          <div className="reveal-in" style={{ animationDelay: '.1s' }}>
+            <SpecialCard card={card} bartender={bartender} reportOpen={false} />
+          </div>
 
-      <div className="reveal-action-dock reveal-in" style={{ animationDelay: '.16s' }} role="tablist" aria-label="查看今日出品">
-        {revealTabs.map((tab) => (
-          <button
-            className={activePanel === tab.key ? 'active' : ''}
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={activePanel === tab.key}
-            onClick={() => setActivePanel(tab.key)}
-          >
-            <i aria-hidden="true" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
+          <div className="reveal-action-dock reveal-in" style={{ animationDelay: '.16s' }} role="navigation" aria-label="查看今日出品">
+            {revealTabs.map((tab) => (
+              <button
+                className={activePanel === tab.key ? 'active' : ''}
+                key={tab.key}
+                type="button"
+                onClick={() => setActivePanel(tab.key)}
+              >
+                <i aria-hidden="true" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
-      <div className={`reveal-panel-stage ${activePanel ? 'as-fullscreen' : ''}`}>
-        {activePanel && (
-          <button className="reveal-panel-close" type="button" onClick={() => setActivePanel('')} aria-label="关闭面板">
-            ×
+      {activePanel && (
+        <div className="reveal-subpage-head reveal-in">
+          <button type="button" onClick={() => setActivePanel('')} aria-label="返回出品页">
+            <span aria-hidden="true">‹</span>
+            返回
           </button>
-        )}
+          <strong>{activeTab?.label}</strong>
+          <span />
+        </div>
+      )}
+
+      <div className={`reveal-panel-stage ${activePanel ? 'as-subpage' : ''}`}>
         {activePanel === 'analysis' && (
           <div className="card reveal-in result-dashboard compact-reveal-panel" style={{ animationDelay: '.04s' }}>
             <div className="report-head">
@@ -371,13 +386,13 @@ export default function RevealPage() {
           <div className="card reveal-in compact-reveal-panel result-dashboard" style={{ animationDelay: '.04s' }}>
             <div className="report-head">
               <div>
-                <label className="field">今日出品</label>
-                <div className="report-title">配方小抄</div>
+                <label className="field">今晚留给你</label>
+                <div className="report-title">吧台便笺</div>
               </div>
             </div>
 
             <div className="report-section">
-              <div className="section-title">明天少调几步</div>
+              <div className="section-title">下一杯先这样</div>
               <div className="plan-notes visual-notes">
                 {(report.nextPlan || [card.suggestion]).slice(0, 3).map((note, index) => (
                   <div className="plan-note" key={note}>
@@ -389,7 +404,7 @@ export default function RevealPage() {
             </div>
 
             <div className={`memory-ticket ${isEmptyCup ? 'empty' : ''}`}>
-              <div className="section-title">存进今天</div>
+              <div className="section-title">种种记住了</div>
               <p>{report.memory || card.comment}</p>
               <small>下次遇到相似的一天，可以从这杯开始。</small>
             </div>
@@ -446,11 +461,13 @@ export default function RevealPage() {
         )}
       </div>
 
-      <div className="btn-row">
-        <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'optimize' })}>← 回到调配清单</button>
-        <div className="spacer" />
-        <button className="btn-primary" onClick={() => dispatch({ type: 'RESET' })}>开新的一天 ↺</button>
-      </div>
+      {!activePanel && (
+        <div className="btn-row">
+          <button className="btn-ghost" onClick={() => dispatch({ type: 'GO', step: 'optimize' })}>返回配方</button>
+          <div className="spacer" />
+          <button className="btn-primary" onClick={() => dispatch({ type: 'RESET' })}>开新的一天</button>
+        </div>
+      )}
     </div>
   )
 }
