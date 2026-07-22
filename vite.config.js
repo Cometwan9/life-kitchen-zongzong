@@ -6,7 +6,8 @@ import { handleApiRequest } from './api/db.mjs'
 // 仅 dev 生效；生产部署需另配后端代理（纯前端调 LLM 会暴露 key，仅适合 demo）。
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const openaiKey = env.OPENAI_API_KEY || env.VITE_OPENAI_API_KEY || ''
+  const openaiKey = env.OPENAI_API_KEY || ''
+  const deepseekKey = env.DEEPSEEK_API_KEY || env.LLM_API_KEY || ''
 
   return {
     plugins: [
@@ -33,6 +34,7 @@ export default defineConfig(({ mode }) => {
           target: 'https://api.deepseek.com',
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/deepseek/, ''),
+          headers: deepseekKey ? { Authorization: `Bearer ${deepseekKey}` } : {},
         },
         '/openai': {
           target: 'https://api.openai.com/v1',

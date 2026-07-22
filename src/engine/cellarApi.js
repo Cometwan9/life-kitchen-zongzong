@@ -1,5 +1,7 @@
+import { apiFetch } from './apiClient.js'
+
 async function request(path, options = {}) {
-  const res = await fetch(path, {
+  const res = await apiFetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

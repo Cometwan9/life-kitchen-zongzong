@@ -2,6 +2,8 @@
 // 网页把当前状态 POST 给桌宠；桌宠产生的动作通过主进程队列，网页端 GET 拉取消费。
 // 桌宠没开也不报错——fire-and-forget，失败静默。
 
+import { apiFetch, isNativeApp } from './apiClient.js'
+
 const PET_URL = 'http://localhost:7878/state'
 const PET_START_URL = '/api/pet/start'
 
@@ -25,6 +27,7 @@ const setOk = (ok) => {
 }
 
 export async function pushPetState(payload) {
+  if (isNativeApp()) return false
   if (payload) lastPayload = payload
   try {
     await fetch(PET_URL, {
@@ -41,8 +44,9 @@ export async function pushPetState(payload) {
 }
 
 export async function startDesktopPet() {
+  if (isNativeApp()) return false
   try {
-    const res = await fetch(PET_START_URL, { method: 'POST' })
+    const res = await apiFetch(PET_START_URL, { method: 'POST' })
     return res.ok
   } catch {
     return false
@@ -64,6 +68,7 @@ export const petIdle = (bartenderId) => pushPetState({ state: 'idle', bartenderI
 
 // 心跳：持续重推当前状态。桌宠中途启动也能在一拍内自动接上。
 export function startPetSync(getPayload) {
+  if (isNativeApp()) return
   stopPetSync()
   const tick = () => pushPetState(getPayload ? getPayload() : lastPayload)
   tick()
@@ -81,6 +86,7 @@ export function onPetAction(fn) {
 }
 
 export function startActionPoll() {
+  if (isNativeApp()) return
   stopActionPoll()
   const tick = async () => {
     try {

@@ -5,26 +5,19 @@
 import { parseTodos } from './parse.js'
 import { BARTENDERS } from '../data/bartenders.js'
 import { EVOMAP_EXPERIENCES } from '../data/evomap.js'
+import { apiFetch, hasApiProxy } from './apiClient.js'
 
-// 兼容旧变量名 VITE_ANTHROPIC_API_KEY，优先用新的 VITE_LLM_API_KEY
-const API_KEY = import.meta.env.VITE_LLM_API_KEY || import.meta.env.VITE_ANTHROPIC_API_KEY
 const MODEL = import.meta.env.VITE_LLM_MODEL || 'deepseek-v4-flash'
-// dev 走 Vite 代理 /deepseek 绕 CORS；可用 VITE_LLM_BASE_URL 覆盖
-const BASE = import.meta.env.VITE_LLM_BASE_URL || '/deepseek'
-const ENDPOINT = `${BASE}/chat/completions`
-const OPENAI_BASE = import.meta.env.VITE_OPENAI_BASE_URL || '/openai'
 const OPENAI_PLANNING_MODEL = import.meta.env.VITE_OPENAI_PLANNING_MODEL || 'gpt-5'
-const OPENAI_PLANNING_ENDPOINT = `${OPENAI_BASE}/responses`
 
-export const llmEnabled = () => Boolean(API_KEY)
+export const llmEnabled = () => hasApiProxy()
 
 // OpenAI 兼容的 chat/completions 调用（DeepSeek）
 async function callLLM({ system, user, maxTokens = 1500 }) {
-  const res = await fetch(ENDPOINT, {
+  const res = await apiFetch('/deepseek/chat/completions', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
       model: MODEL,
@@ -142,7 +135,7 @@ taskType 七选一：${TYPE_ENUM.join('/')}。
     },
   }
 
-  const res = await fetch(OPENAI_PLANNING_ENDPOINT, {
+  const res = await apiFetch('/openai/responses', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -318,7 +311,7 @@ export async function parseTodosSmart(text) {
     console.warn('[llm] OpenAI planner fallback:', e.message)
   }
 
-  if (!API_KEY) {
+  if (!llmEnabled()) {
     const raw = parseTodos(text)
     return {
       todos: normalizeTodos(raw, 'rule'),
@@ -382,7 +375,7 @@ function suggestBartenderRule(text) {
 
 // 模块十一：自然语言 → 推荐/生成调酒师种种
 export async function suggestBartenderSmart(text) {
-  if (!API_KEY) return { id: suggestBartenderRule(text), source: 'rule', note: '' }
+  if (!llmEnabled()) return { id: suggestBartenderRule(text), source: 'rule', note: '' }
   try {
     const ids = BARTENDERS.map((b) => `${b.id}(${b.name}/${b.style})`).join('、')
     const system = `用户描述今天想被怎么管理。从这五位调酒师种种里选最合适的一位，并给一句温柔的理由。
