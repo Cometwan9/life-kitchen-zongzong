@@ -39,6 +39,7 @@ import {
   getGeminiConfig,
   hasGemini,
 } from './lib/gemini.mjs'
+import { transcribeConfigured, transcribeWithGemini } from './lib/transcribe.mjs'
 
 let petProcess = null
 const INVITE_THEMES = {
@@ -875,6 +876,36 @@ export async function handleApiRequest(req, res) {
       const body = await readBody(req)
       const result = await proxySeedance(body)
       sendJson(res, result.ok === false ? 502 : 200, result)
+      return true
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/transcribe/status') {
+      const { model } = getGeminiConfig()
+      sendJson(res, 200, {
+        ok: true,
+        enabled: transcribeConfigured(),
+        provider: 'gemini',
+        model: process.env.GEMINI_TRANSCRIBE_MODEL || model,
+      })
+      return true
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/transcribe') {
+      const body = await readBody(req)
+      try {
+        const result = await transcribeWithGemini({
+          audioBase64: body.audioBase64 || body.audio || body.data,
+          mimeType: body.mimeType || body.mime || body.contentType,
+          prompt: body.prompt,
+        })
+        sendJson(res, 200, { ok: true, text: result.text, model: result.model, provider: result.provider })
+      } catch (error) {
+        sendJson(res, error.status || 500, {
+          ok: false,
+          error: error.code || 'transcribe_failed',
+          message: error.message || '语音转写失败',
+        })
+      }
       return true
     }
 
