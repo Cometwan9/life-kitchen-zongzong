@@ -1,6 +1,5 @@
-const BASE = import.meta.env.VITE_TRANSCRIBE_BASE_URL || '/openai'
-const ENDPOINT = `${BASE}/audio/transcriptions`
-const MODEL = import.meta.env.VITE_TRANSCRIBE_MODEL || 'gpt-4o-transcribe'
+﻿const API_BASE = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const ENDPOINT = `${API_BASE}/api/transcribe`
 
 async function readErrorMessage(res) {
   const raw = await res.text().catch(() => '')
@@ -13,25 +12,41 @@ async function readErrorMessage(res) {
   }
 }
 
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      const comma = result.indexOf(',')
+      resolve(comma >= 0 ? result.slice(comma + 1) : result)
+    }
+    reader.onerror = () => reject(new Error('录音读取失败'))
+    reader.readAsDataURL(blob)
+  })
+}
+
 export async function transcribeAudio(blob) {
   if (!blob || blob.size === 0) throw new Error('没有录到声音')
 
-  const form = new FormData()
-  const ext = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : 'webm'
-  form.append('file', blob, `life-kitchen-voice.${ext}`)
-  form.append('model', MODEL)
-  form.append('prompt', '这是一段中文日程倾诉，请忠实转写用户说的话。')
+  const audioBase64 = await blobToBase64(blob)
+  const mimeType = blob.type || 'audio/webm'
 
   const res = await fetch(ENDPOINT, {
     method: 'POST',
-    body: form,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      audioBase64,
+      mimeType,
+      prompt: '这是一段中文日程倾诉，请忠实转写用户说的话。只输出转写正文。',
+    }),
   })
 
   if (!res.ok) {
     const message = await readErrorMessage(res)
-    if (res.status === 401) throw new Error('语音 API key 没配好，或者 Vite 服务启动时没有读到 key。')
-    if (res.status === 404) throw new Error('语音转写接口没有接上，请检查 /openai 代理或模型名。')
+    if (res.status === 401) throw new Error('语音 API key 没配好，请检查服务端 GEMINI_API_KEY。')
+    if (res.status === 404) throw new Error('语音转写接口没有接上，请检查 /api/transcribe。')
     if (res.status === 413) throw new Error('这段录音太长了，先短一点说。')
+    if (res.status === 503) throw new Error(message || '语音转写未配置：请在服务端设置 GEMINI_API_KEY。')
     throw new Error(message || `语音转写失败 ${res.status}`)
   }
 

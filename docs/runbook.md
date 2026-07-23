@@ -12,11 +12,12 @@
 | `GEMINI_MODEL` | `gemini-flash-latest` | Gemini 模型 ID。免费层对新用户可能限制旧模型名。 |
 | `GEMINI_API_BASE` | `https://generativelanguage.googleapis.com` | 可选；自建网关或本地联调可覆盖。 |
 | `HTTPS_PROXY` / `GEMINI_HTTPS_PROXY` | (空) | **关键**：Node 不会自动走系统 VPN。本机 Clash 混合端口常见为 `http://127.0.0.1:7897`。 |
+| `VITE_API_BASE_URL` | (空) | Capacitor App 填生产 HTTPS 根地址；本地网页可空，走同源 `/api`。 |
 | `VITE_COLLECT_BASE_URL` | `http://localhost:3000` | Adventure 深链到 data-collection 的根地址；线上填 Production，换域名只改这里。 |
 | `VITE_TAVERN_BASE_URL` | (空) | 酒馆自己的线上根地址，可选，以后回流用。 |
 | `VITE_ADVENTURE_CAMPAIGN` | `adventurex-2026` | 写入 collect query 的 campaign。 |
 
-桌宠无环境变量。自然语言解析请求走 `/api/llm/parse-todos` 与 `/api/llm/suggest-bartender`。
+桌宠无环境变量。自然语言解析走 `/api/llm/parse-todos` 与 `/api/llm/suggest-bartender`；语音转写走 `/api/transcribe`（同一把 `GEMINI_API_KEY`）。
 
 ## 端口
 

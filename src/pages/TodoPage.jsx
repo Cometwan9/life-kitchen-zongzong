@@ -568,7 +568,12 @@ export default function TodoPage() {
       return
     }
 
-    if (startBrowserSpeechFallback()) return
+    // Capacitor / iOS WKWebView 上浏览器听写不稳定，优先走云端录音转写。
+    const preferCloud =
+      Boolean(window.Capacitor?.isNativePlatform?.()) ||
+      /iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+
+    if (!preferCloud && startBrowserSpeechFallback()) return
     await startCloudRecording()
   }
 
@@ -581,11 +586,22 @@ export default function TodoPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaStreamRef.current = stream
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/mp4')
+      const preferMp4 =
+        Boolean(window.Capacitor?.isNativePlatform?.()) ||
+        /iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+      const mimeType = preferMp4
+        ? MediaRecorder.isTypeSupported('audio/mp4')
           ? 'audio/mp4'
-          : ''
+          : MediaRecorder.isTypeSupported('audio/aac')
+            ? 'audio/aac'
+            : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+              ? 'audio/webm;codecs=opus'
+              : ''
+        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/mp4')
+            ? 'audio/mp4'
+            : ''
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
       audioChunksRef.current = []
 
@@ -607,7 +623,10 @@ export default function TodoPage() {
           appendVoiceText(spoken)
           setVoiceStatus('已经写到纸笺上了。')
         } catch (error) {
-          const fallbackStarted = startBrowserSpeechFallback()
+          const canFallbackBrowser =
+            !Boolean(window.Capacitor?.isNativePlatform?.()) &&
+            !/iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+          const fallbackStarted = canFallbackBrowser ? startBrowserSpeechFallback() : false
           setVoiceStatus(
             fallbackStarted
               ? '云端转写没接上，已切到浏览器听写。请再说一次。'
