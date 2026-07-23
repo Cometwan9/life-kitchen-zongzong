@@ -120,6 +120,12 @@
 * { box-sizing: border-box; }
 img, svg { image-rendering: pixelated; }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--body);
@@ -142,6 +148,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-size: 16px;
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 .app { max-width: 720px; margin: 0 auto; padding: 14px 16px 112px; }
@@ -150,6 +158,20 @@ body {
 }
 .app.step-optimize {
   max-width: 1120px;
+}
+
+@supports (padding: env(safe-area-inset-top)) {
+  .app {
+    min-height: 100dvh;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+  .intro-page,
+  .loading-page {
+    min-height: 100dvh;
+    padding-top: max(30px, env(safe-area-inset-top));
+    padding-bottom: max(30px, env(safe-area-inset-bottom));
+  }
 }
 
 /* —— 首页 / 世界观入口 —— */

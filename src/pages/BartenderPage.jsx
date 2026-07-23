@@ -10,6 +10,7 @@ import { generateCustomPetImage } from '../engine/imageGen.js'
 import { requestSeedanceMotion } from '../engine/seedance.js'
 import { suggestBartenderSmart } from '../engine/llm.js'
 import { chooseBartenderFromMood, listAvailableBartenders } from '../engine/chooseBartender.js'
+import { isNativeApp } from '../engine/apiClient.js'
 
 export const BODY = {
   rosemary: '#6F8A5B',
@@ -376,9 +377,11 @@ export default function BartenderPage() {
         <em>{currentDate}</em>
       </div>
       <p className="subtitle summon-subtitle">{summoning ? `${cur.name} 正在赶来吧台。` : '你想邀请哪只种种一起喝一杯？'}</p>
-      <button className="pet-summon-link" type="button" onClick={summonDesktopPet}>
-        把种种召唤到桌面
-      </button>
+      {!isNativeApp() && (
+        <button className="pet-summon-link" type="button" onClick={summonDesktopPet}>
+          把种种召唤到桌面
+        </button>
+      )}
       {petSummonNote && <div className="pet-summon-note">{petSummonNote}</div>}
       {helperNote && !helperOpen && <div className="pet-summon-note helper-pick-note">{helperNote}</div>}
 

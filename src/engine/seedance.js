@@ -1,3 +1,5 @@
+import { apiFetch } from './apiClient.js'
+
 const PROMPTS = {
   walk_to_bar: '像素风植物小精灵侧视图，面朝右，从画面左侧一步一步走向右侧魔法酒馆吧台；角色必须是侧面走路姿势，有清楚的四帧走路节奏，不要正面站立，不要漂浮。浅蓝白色背景，夏季清凉魔法城堡氛围，动作短循环，透明感，不能写字。',
   daily: '像素风植物小精灵拿着调酒杯轻轻摇杯，旁边有一张今日小票，浅蓝和淡黄色配色，动作短循环，透明感，不能写字。',
@@ -27,7 +29,7 @@ export async function requestSeedanceMotion({ scene, mode, bartender, referenceI
   const personality = bartender?.style || bartender?.reminderTone || '植物调酒师'
   const prompt = `${PROMPTS[key] || PROMPTS.daily} 主角是${name}，性格气质：${personality}。整体必须保持已有种种的可爱像素风，不要矢量扁平风，不要厚重渐变。`
   try {
-    const res = await fetch('/api/seedance/generate', {
+    const res = await apiFetch('/api/seedance/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

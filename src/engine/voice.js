@@ -1,5 +1,5 @@
-const BASE = import.meta.env.VITE_TRANSCRIBE_BASE_URL || '/openai'
-const ENDPOINT = `${BASE}/audio/transcriptions`
+import { apiFetch } from './apiClient.js'
+
 const MODEL = import.meta.env.VITE_TRANSCRIBE_MODEL || 'gpt-4o-transcribe'
 
 async function readErrorMessage(res) {
@@ -22,15 +22,15 @@ export async function transcribeAudio(blob) {
   form.append('model', MODEL)
   form.append('prompt', '这是一段中文日程倾诉，请忠实转写用户说的话。')
 
-  const res = await fetch(ENDPOINT, {
+  const res = await apiFetch('/openai/audio/transcriptions', {
     method: 'POST',
     body: form,
   })
 
   if (!res.ok) {
     const message = await readErrorMessage(res)
-    if (res.status === 401) throw new Error('语音 API key 没配好，或者 Vite 服务启动时没有读到 key。')
-    if (res.status === 404) throw new Error('语音转写接口没有接上，请检查 /openai 代理或模型名。')
+    if (res.status === 401) throw new Error('语音转写服务暂不可用，请检查 Vercel 代理配置。')
+    if (res.status === 404) throw new Error('语音转写接口没有接上，请检查 Vercel 的 /openai 代理。')
     if (res.status === 413) throw new Error('这段录音太长了，先短一点说。')
     throw new Error(message || `语音转写失败 ${res.status}`)
   }

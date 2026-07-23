@@ -1,5 +1,7 @@
+import { apiFetch } from './apiClient.js'
+
 async function request(path, options = {}) {
-  const res = await fetch(path, {
+  const res = await apiFetch(path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -131,13 +133,6 @@ export async function recordEvent(event) {
   return data.event
 }
 
-export async function sendLoginCode({ phone, inviteCode }) {
-  return request('/api/auth/send-code', {
-    method: 'POST',
-    body: JSON.stringify({ phone, inviteCode }),
-  })
-}
-
 export async function generateInviteCodes({ theme = 'zhongzhong', count = 1, maxUses = 1, label = '种种请柬', adminKey = '' } = {}) {
   return request('/api/invites/generate', {
     method: 'POST',
@@ -152,10 +147,10 @@ export async function fetchInviteCodes(adminKey = '') {
   })
 }
 
-export async function loginWithPhoneCode({ phone, code, inviteCode, profile }) {
+export async function loginWithEmailPassword({ email, password, inviteCode, profile }) {
   return request('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ phone, code, inviteCode, profile }),
+    body: JSON.stringify({ email, password, inviteCode, profile }),
   })
 }
 

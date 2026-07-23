@@ -10,6 +10,7 @@ import { applyExperience } from '../engine/evolve.js'
 import { EVOMAP_EXPERIENCES } from '../data/evomap.js'
 import { buildReviewCard } from '../engine/review.js'
 import { fetchUserHabits } from '../engine/cellarApi.js'
+import { setApiAuthToken } from '../engine/apiClient.js'
 
 const STORAGE_KEY = 'life-kitchen-v2'
 const StoreCtx = createContext(null)
@@ -352,19 +353,22 @@ function load() {
 export function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, load)
   useEffect(() => {
+    setApiAuthToken(state.authToken)
+  }, [state.authToken])
+  useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch {}
   }, [state])
   useEffect(() => {
     const userId = state.userProfile?.id
-    if (!userId) return
+    if (!userId || !state.authToken) return
     fetchUserHabits(userId)
       .then((habit) => {
         if (habit) dispatch({ type: 'SET_USER_HABITS', habits: habit })
       })
       .catch(() => {})
-  }, [state.userProfile?.id])
+  }, [state.userProfile?.id, state.authToken])
   return <StoreCtx.Provider value={{ state, dispatch }}>{children}</StoreCtx.Provider>
 }
 

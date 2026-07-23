@@ -1,5 +1,6 @@
 import tavernPanorama from '../../assets/hero/life-kitchen-tavern-panorama.png'
 import { useState } from 'react'
+import './IntroPage.css'
 
 export default function IntroPage({ onQuickStart, onFullStart, onAdventure }) {
   const [entering, setEntering] = useState(false)
@@ -34,7 +35,7 @@ export default function IntroPage({ onQuickStart, onFullStart, onAdventure }) {
         <img className="tavern-bg" src={tavernPanorama} alt="像素风魔法酒馆里的种种们" draggable="false" />
       </figure>
 
-      <div className="intro-actions">
+      <div className="intro-actions intro-actions-stacked">
         <button className="start-spell primary" onClick={enterTavern} aria-label="进入酒馆">
           <span>进入酒馆</span>
         </button>

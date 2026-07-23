@@ -3,6 +3,7 @@
 
 import { parseTodos } from './parse.js'
 import { BARTENDERS } from '../data/bartenders.js'
+import { apiFetch } from './apiClient.js'
 
 const TYPE_ENUM = ['deep_work', 'creative', 'communication', 'admin', 'recovery', 'urgent', 'review']
 const ENERGY_ENUM = ['low', 'medium', 'high']
@@ -13,7 +14,7 @@ let cachedEnabled = null
 export async function llmEnabled() {
   if (cachedEnabled !== null) return cachedEnabled
   try {
-    const res = await fetch('/api/llm/status')
+    const res = await apiFetch('/api/llm/status')
     const data = await res.json().catch(() => ({}))
     cachedEnabled = Boolean(res.ok && data.enabled)
   } catch {
@@ -23,7 +24,7 @@ export async function llmEnabled() {
 }
 
 async function requestLlm(path, text) {
-  const res = await fetch(path, {
+  const res = await apiFetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),

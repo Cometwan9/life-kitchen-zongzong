@@ -142,6 +142,25 @@ function canManageInvites(req) {
   return Boolean(adminKey && (headerKey === adminKey || authKey === adminKey))
 }
 
+async function requireAuthenticatedUser(req, res) {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
+  if (!token) {
+    sendJson(res, 401, { error: 'unauthorized', message: '请先登录。' })
+    return null
+  }
+  const session = await getSession(token)
+  if (!session || session.expiresAt < Date.now()) {
+    sendJson(res, 401, { error: 'unauthorized', message: '登录已过期，请重新入座。' })
+    return null
+  }
+  const user = await findUserById(session.userId)
+  if (!user) {
+    sendJson(res, 401, { error: 'user_missing', message: '没有找到当前用户。' })
+    return null
+  }
+  return user
+}
+
 async function readBody(req) {
   const chunks = []
   for await (const chunk of req) chunks.push(chunk)
@@ -631,28 +650,30 @@ export async function handleApiRequest(req, res) {
 
     if (req.method === 'GET' && url.pathname === '/api/auth/me') {
       if (!requireStorage(res)) return true
-      const auth = req.headers.authorization || ''
-      const token = auth.replace(/^Bearer\s+/i, '') || url.searchParams.get('token') || ''
-      const session = await getSession(token)
-      if (!session || session.expiresAt < Date.now()) {
-        sendJson(res, 401, { error: 'unauthorized' })
-        return true
-      }
-      const user = await findUserById(session.userId)
-      if (!user) {
-        sendJson(res, 401, { error: 'user_missing' })
-        return true
-      }
+
+      const user = await requireAuthenticatedUser(req, res)
+      if (!user) return true
+
       sendJson(res, 200, { user: publicUser(user) })
       return true
     }
 
     if (req.method === 'POST' && url.pathname === '/api/users') {
       if (!requireStorage(res)) return true
+
+      const authenticatedUser = await requireAuthenticatedUser(req, res)
+      if (!authenticatedUser) return true
       const body = await readBody(req)
-      const user = normalizeUser(body.user || body)
-      const saved = await upsertUser(user)
       const profile = body.user || body
+      const user = normalizeUser({
+        ...authenticatedUser,
+        ...profile,
+        id: authenticatedUser.id,
+        email: authenticatedUser.email,
+        inviteCode: authenticatedUser.inviteCode,
+      })
+      const saved = await upsertUser(user)
+
       if (profile.habitSummary || profile.preferences || profile.avoidances) {
         await saveHabitsFromProfile(saved, {
           habitSummary: profile.habitSummary,
@@ -666,20 +687,23 @@ export async function handleApiRequest(req, res) {
 
     if (req.method === 'GET' && url.pathname === '/api/habits') {
       if (!requireStorage(res)) return true
-      const userId = url.searchParams.get('userId')
-      if (!userId) {
-        sendJson(res, 400, { error: 'missing userId' })
-        return true
-      }
-      const habit = await findHabitsByUserId(userId)
+
+      const user = await requireAuthenticatedUser(req, res)
+      if (!user) return true
+      const habit = await findHabitsByUserId(user.id)
+
       sendJson(res, 200, { habit })
       return true
     }
 
     if (req.method === 'POST' && url.pathname === '/api/habits') {
       if (!requireStorage(res)) return true
+
+      const authenticatedUser = await requireAuthenticatedUser(req, res)
+      if (!authenticatedUser) return true
       const body = await readBody(req)
-      const user = normalizeUser(body.user || { id: body.userId })
+      const user = normalizeUser(authenticatedUser)
+
       const habit = await saveHabitsFromProfile(user, body.profile || body)
       sendJson(res, 200, { habit })
       return true
@@ -687,33 +711,35 @@ export async function handleApiRequest(req, res) {
 
     if (req.method === 'DELETE' && url.pathname === '/api/habits') {
       if (!requireStorage(res)) return true
-      const userId = url.searchParams.get('userId')
-      if (!userId) {
-        sendJson(res, 400, { error: 'missing userId' })
-        return true
-      }
-      await clearUserMemories(userId)
+
+      const user = await requireAuthenticatedUser(req, res)
+      if (!user) return true
+      await clearUserMemories(user.id)
+
       sendJson(res, 200, { ok: true })
       return true
     }
 
     if (req.method === 'GET' && url.pathname === '/api/memories') {
       if (!requireStorage(res)) return true
-      const userId = url.searchParams.get('userId')
-      if (!userId) {
-        sendJson(res, 400, { error: 'missing userId' })
-        return true
-      }
+
+      const user = await requireAuthenticatedUser(req, res)
+      if (!user) return true
       const limit = Math.min(60, Number(url.searchParams.get('limit') || 30))
-      const memories = await listMemories(userId, limit)
+      const memories = await listMemories(user.id, limit)
+
       sendJson(res, 200, { memories })
       return true
     }
 
     if (req.method === 'POST' && url.pathname === '/api/memories') {
       if (!requireStorage(res)) return true
+
+      const authenticatedUser = await requireAuthenticatedUser(req, res)
+      if (!authenticatedUser) return true
       const body = await readBody(req)
-      const user = normalizeUser(body.user || { id: body.userId })
+      const user = normalizeUser(authenticatedUser)
+
       const card = body.card || body.reviewCard
       if (!card) {
         sendJson(res, 400, { error: 'missing review card' })
@@ -790,8 +816,12 @@ export async function handleApiRequest(req, res) {
 
     if (req.method === 'POST' && url.pathname === '/api/cellar') {
       if (!requireStorage(res)) return true
+
+      const authenticatedUser = await requireAuthenticatedUser(req, res)
+      if (!authenticatedUser) return true
       const body = await readBody(req)
-      const user = normalizeUser(body.user)
+      const user = normalizeUser(authenticatedUser)
+
       const card = body.card || {}
       if (!card.drinkName) {
         sendJson(res, 400, { error: 'missing drink card' })

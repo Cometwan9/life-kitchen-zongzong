@@ -97,7 +97,7 @@ Access-Control-Allow-Headers: content-type
 src/engine/llm.js           ← LLM 接入点(改模型/换 provider 在这)
 src/engine/petBridge.js     ← 网页 ↔ 桌宠通信
 src/store/store.jsx         ← reducer + localStorage 持久化(key 'life-kitchen-v2')
-vite.config.js              ← dev proxy 配置(/deepseek) + server.open
+vite.config.js              ← 本地 API middleware + server.open
 desktop/main.js             ← 桌宠主进程(窗口 + HTTP 桥 + 动作队列)
 desktop/renderer/pet.js     ← 桌宠渲染与交互(清单/杯子/点击完成)
 desktop/renderer/sprites.js ← 像素精灵与调色板

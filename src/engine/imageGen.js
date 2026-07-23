@@ -1,5 +1,6 @@
+import { apiFetch } from './apiClient.js'
+
 const IMAGE_MODEL = import.meta.env.VITE_IMAGE_MODEL || 'gpt-image-1'
-const IMAGE_ENDPOINT = '/openai/images/generations'
 
 function hashText(text) {
   return Array.from(String(text || '')).reduce((sum, char) => sum + char.charCodeAt(0), 0)
@@ -57,7 +58,7 @@ export async function generateCustomPetImage({ name, ingredient, personality, me
     `Schedule management method: ${method || 'gentle but efficient daily planning'}.`,
   ].join(' ')
 
-  const res = await fetch(IMAGE_ENDPOINT, {
+  const res = await apiFetch('/openai/images/generations', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -106,7 +107,7 @@ export async function generateBartenderDrinkMoment({ bartender, drinkName, recip
     'Keep the background simple, soft, and low saturation so the mascot and drink are the focus.',
   ].join(' ')
 
-  const res = await fetch(IMAGE_ENDPOINT, {
+  const res = await apiFetch('/openai/images/generations', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -172,7 +173,7 @@ export async function generateDrinkPixelCard({ card, bartender }) {
     'Make this card feel customized and collectible, like a game settlement item or shareable MBTI-style result card.',
   ].join(' ')
 
-  const res = await fetch(IMAGE_ENDPOINT, {
+  const res = await apiFetch('/openai/images/generations', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
