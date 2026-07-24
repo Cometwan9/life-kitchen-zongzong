@@ -12,6 +12,7 @@ import { formatDuration } from '../engine/time.js'
 import { getRecipeVolumeLayers } from '../engine/recipeVolume.js'
 import { canCompleteTask } from '../engine/execution.js'
 import { notifyTaskDone } from '../engine/uiSettings.js'
+import { playUiSound } from '../engine/sfx.js'
 
 const OPTIMIZATION_PROPS = [
   {
@@ -547,6 +548,7 @@ export default function OptimizePage() {
     setActiveId(t.id)
     setElapsed(0)
     activeStartedAt.current = Date.now()
+    playUiSound('mix')
     const p = buildBrewPayload(t)
     payloadRef.current = p
     ensurePetState(p)
@@ -988,7 +990,7 @@ export default function OptimizePage() {
                   </div>
                 ) : (
                   <div className="single-task-actions">
-                    <button className="btn-primary" type="button" onClick={() => start(currentTask)}>计时专注</button>
+                    <button className="btn-primary" type="button" data-sfx="off" onClick={() => start(currentTask)}>计时专注</button>
                     <button className="task-complete-check quiet-check" type="button" onClick={() => checkOffTask(currentTask.id)}>
                       <span aria-hidden="true" />
                       直接打勾

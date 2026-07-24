@@ -12,6 +12,7 @@ import { onPetStatus, startPetSync, stopPetSync, pushPetState, onPetAction } fro
 import { formatDuration } from '../engine/time.js'
 import { canAutoFinalize, canCompleteTask } from '../engine/execution.js'
 import { notifyTaskDone } from '../engine/uiSettings.js'
+import { playUiSound } from '../engine/sfx.js'
 
 // 按"调制手法"描述，不点名原料（茶底/奶泡留到饮品生成页才展示）
 const ACTION = {
@@ -223,6 +224,7 @@ export default function ExecutePage() {
     setActiveId(t.id)
     setElapsed(0)
     activeStartedAt.current = Date.now()
+    playUiSound('mix')
     const p = buildBrewPayload(t)
     payloadRef.current = p
     pushPetState(p)
@@ -315,6 +317,7 @@ export default function ExecutePage() {
                 className={`time-card ${st === 'completed' ? 'done' : st === 'skipped' ? 'skipped' : ''} ${isCurrent ? 'current' : ''}`}
                 style={{ '--time-tone': tone }}
                 disabled={!!activeId || st === 'completed' || st === 'skipped'}
+                data-sfx="off"
                 onClick={() => start(task)}
                 title={activeId ? '先结束当前计时' : st ? '已记录' : '点击开始这一项'}
                 aria-label={`第 ${index + 1} 项，${clock(itemStart)} 到 ${clock(end)}，${task.title}`}
@@ -376,7 +379,7 @@ export default function ExecutePage() {
           {active ? (
             <span className="tag">进行中</span>
           ) : nextTask ? (
-            <button className="btn-ghost" disabled={!!activeId} onClick={() => start(nextTask)}>开始这一项</button>
+            <button className="btn-ghost" disabled={!!activeId} data-sfx="off" onClick={() => start(nextTask)}>开始这一项</button>
           ) : (
             <button className="btn-primary" onClick={requestFinalize}>出杯</button>
           )}
